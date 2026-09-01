@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,11 +9,16 @@
   <!-- Premium Medical & Technical Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+<!-- Medical Grid & ECG Pattern Background -->
+<div class="medical-bg-pattern">
+  <div class="medical-ecg-trace"></div>
+</div>
 
 <!-- ══════════════════ TOP MEDICAL HEADER BAR ══════════════════ -->
 <header id="app-header">
@@ -46,9 +51,32 @@
   </div>
 
   <div class="header-right">
+    <!-- Dark / Light Theme Toggle Switch -->
+    <button id="btn-theme-toggle" class="btn btn-theme-switch" title="Toggle Light / Dark Clinical Theme" onclick="toggleTheme()">
+      <span class="theme-icon-dark">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </span>
+      <span class="theme-icon-light hidden">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="12" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </span>
+      <span id="theme-label">Dark</span>
+    </button>
+
     <!-- Quick Action: System Settings / Calibration / Diagnostics -->
-    <button id="btn-settings-modal" class="btn btn-secondary btn-icon-only" title="System Settings, Calibration & Diagnostics" onclick="openSettingsModal('calibration')">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <button id="btn-settings-modal" class="btn btn-secondary" title="System Settings, Calibration & Diagnostics" onclick="openSettingsModal('calibration')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
       </svg>
@@ -264,11 +292,11 @@
 
         <div class="monitor-header-right">
           <!-- Quick calibration drawer trigger -->
-          <button class="btn btn-sm btn-ghost" onclick="openSettingsModal('calibration')" title="Quick Zero / Calibrate Sensor">
+          <button class="btn btn-sm btn-ghost" onclick="openSettingsModal('calibration')" title="Enter Sensor Calibration & LCD Live Weight Mode">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             </svg>
-            <span>Quick Calibrate</span>
+            <span>Sensor Calibration Mode</span>
           </button>
           <div class="level-digital-badge" id="level-badge">-- %</div>
         </div>
@@ -276,85 +304,128 @@
 
       <div class="card-body monitor-body">
 
-        <!-- Center Display: Realistic Animated Medical IV Chamber & Bag -->
+        <!-- Center Display: Realistic 3D Medical IV Infusion Bottle -->
         <div class="monitor-center-stage">
           <div class="iv-apparatus-wrapper">
-            <svg id="iv-svg" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+            <svg id="iv-svg" viewBox="0 0 240 370" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <!-- Safe Cyan Gradient -->
                 <linearGradient id="fluidGradSafe" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.95"/>
-                  <stop offset="50%" stop-color="#00bbf9" stop-opacity="0.90"/>
-                  <stop offset="100%" stop-color="#0077b6" stop-opacity="0.95"/>
+                  <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.98"/>
+                  <stop offset="45%" stop-color="#00bbf9" stop-opacity="0.94"/>
+                  <stop offset="100%" stop-color="#0077b6" stop-opacity="0.98"/>
                 </linearGradient>
 
                 <!-- Warning Amber Gradient -->
                 <linearGradient id="fluidGradWarn" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#fee440" stop-opacity="0.95"/>
-                  <stop offset="100%" stop-color="#f77f00" stop-opacity="0.95"/>
+                  <stop offset="0%" stop-color="#fee440" stop-opacity="0.98"/>
+                  <stop offset="100%" stop-color="#f77f00" stop-opacity="0.98"/>
                 </linearGradient>
 
                 <!-- Critical Red Gradient -->
                 <linearGradient id="fluidGradCrit" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ff0054" stop-opacity="0.95"/>
-                  <stop offset="100%" stop-color="#9e0059" stop-opacity="0.95"/>
+                  <stop offset="0%" stop-color="#ff0054" stop-opacity="0.98"/>
+                  <stop offset="100%" stop-color="#9e0059" stop-opacity="0.98"/>
                 </linearGradient>
 
-                <!-- Glass Sheen Gradient -->
-                <linearGradient id="glassSheen" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.28"/>
-                  <stop offset="35%" stop-color="#ffffff" stop-opacity="0.08"/>
+                <!-- Glass Body 3D Specular Highlight -->
+                <linearGradient id="glassReflectionL" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38"/>
+                  <stop offset="40%" stop-color="#ffffff" stop-opacity="0.12"/>
                   <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
                 </linearGradient>
 
-                <clipPath id="bagInnerClip">
-                  <path d="M 35 48 C 35 38, 165 38, 165 48 L 165 220 C 165 242, 125 252, 100 252 C 75 252, 35 242, 35 220 Z"/>
+                <linearGradient id="glassReflectionR" x1="100%" y1="0%" x2="0%" y2="0%">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+                </linearGradient>
+
+                <!-- 3D Bottle Contour Clip -->
+                <clipPath id="bottleContourClip">
+                  <path d="M 40 54 C 40 44, 200 44, 200 54 L 200 236 C 200 254, 155 264, 120 264 C 85 264, 40 254, 40 236 Z"/>
+                </clipPath>
+
+                <!-- Drip Chamber Clip -->
+                <clipPath id="chamberClip">
+                  <rect x="105" y="274" width="30" height="42" rx="4"/>
                 </clipPath>
               </defs>
 
-              <!-- Medical Pole Suspension Bracket -->
-              <path d="M 100 4 L 100 16 M 88 16 C 88 8, 112 8, 112 16 C 112 28, 88 28, 88 38 L 112 38" 
-                    fill="none" stroke="#3d6085" stroke-width="3" stroke-linecap="round"/>
-              <rect x="90" y="36" width="20" height="12" rx="3" fill="#1b2e4b" stroke="#335680" stroke-width="1.5"/>
+              <!-- Stainless Steel Medical Hanger Hook & Ring -->
+              <path d="M 120 4 L 120 18 M 106 18 C 106 8, 134 8, 134 18 C 134 30, 106 30, 106 42 L 134 42" 
+                    fill="none" class="iv-hanger-steel" stroke-width="3.5" stroke-linecap="round"/>
+              <rect x="108" y="38" width="24" height="8" rx="3" class="iv-hanger-cap"/>
 
-              <!-- IV Bag Translucent Glass Body -->
-              <path d="M 35 48 C 35 38, 165 38, 165 48 L 165 220 C 165 242, 125 252, 100 252 C 75 252, 35 242, 35 220 Z" 
-                    fill="#0a172c" stroke="#1f4472" stroke-width="2.5" />
+              <!-- Outer Bottle 3D Contour Glass Shell -->
+              <path d="M 40 54 C 40 44, 200 44, 200 54 L 200 236 C 200 254, 155 264, 120 264 C 85 264, 40 254, 40 236 Z" 
+                    class="iv-bottle-shell" stroke-width="2.8" />
 
-              <!-- Fluid Mesh (Animated by JS) -->
-              <g clip-path="url(#bagInnerClip)">
-                <rect id="fluid-rect" x="30" y="255" width="140" height="0" fill="url(#fluidGradSafe)"/>
-                <path id="fluid-wave" d="" fill="url(#fluidGradSafe)" opacity="0.75"/>
+              <!-- Fluid Volume Rectangle & Dynamic Wave -->
+              <g clip-path="url(#bottleContourClip)">
+                <rect id="fluid-rect" x="38" y="260" width="164" height="0" fill="url(#fluidGradSafe)"/>
+                <path id="fluid-wave" d="" fill="url(#fluidGradSafe)" opacity="0.8"/>
               </g>
 
-              <!-- Glass Reflection Layer -->
-              <path d="M 35 48 C 35 38, 165 38, 165 48 L 165 220 C 165 242, 125 252, 100 252 C 75 252, 35 242, 35 220 Z" 
-                    fill="url(#glassSheen)" clip-path="url(#bagInnerClip)"/>
+              <!-- Left & Right Glass Highlights -->
+              <rect x="42" y="50" width="22" height="195" fill="url(#glassReflectionL)" clip-path="url(#bottleContourClip)" pointer-events="none"/>
+              <rect x="180" y="50" width="16" height="195" fill="url(#glassReflectionR)" clip-path="url(#bottleContourClip)" pointer-events="none"/>
 
-              <!-- Calibration & Graduated Volumetric Scale Marks -->
-              <g stroke="#3a6f9f" stroke-width="1.5" opacity="0.85">
-                <line x1="38" y1="80" x2="52" y2="80"/>
-                <text x="64" y="84" fill="#6ba3d4" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="600">75%</text>
-
-                <line x1="38" y1="125" x2="52" y2="125"/>
-                <text x="64" y="129" fill="#6ba3d4" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="600">50%</text>
-
-                <line x1="38" y1="170" x2="52" y2="170"/>
-                <text x="64" y="174" fill="#6ba3d4" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="600">25%</text>
-
-                <line x1="38" y1="215" x2="55" y2="215" stroke="#ff477e" stroke-width="2"/>
-                <text x="64" y="219" fill="#ff477e" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700">EMPTY</text>
+              <!-- Authentic Pharmaceutical Infusion Label Plate -->
+              <g class="iv-rx-label-plate" pointer-events="none">
+                <rect x="90" y="96" width="100" height="74" rx="4" class="iv-label-bg"/>
+                <text x="140" y="112" class="iv-label-heading" text-anchor="middle">SODIUM CHLORIDE</text>
+                <text x="140" y="124" class="iv-label-sub" text-anchor="middle">0.9% INJECTION USP</text>
+                <text x="140" y="140" class="iv-label-vol" text-anchor="middle">500 mL</text>
+                <text x="140" y="152" class="iv-label-sterile" text-anchor="middle">STERILE · NONPYROGENIC</text>
+                <line x1="98" y1="158" x2="182" y2="158" stroke="currentColor" stroke-opacity="0.3" stroke-width="0.8"/>
+                <text x="140" y="166" class="iv-label-unit" text-anchor="middle">IVMU-01 MONITORED</text>
               </g>
 
-              <!-- Drip Chamber Port -->
-              <rect x="94" y="252" width="12" height="18" rx="2" fill="#142b47" stroke="#254e7d"/>
+              <!-- High-Contrast Embossed Volumetric Graduation Scale -->
+              <g class="iv-grad-scale" pointer-events="none">
+                <!-- 100% / 500 mL -->
+                <line x1="42" y1="65" x2="68" y2="65" class="grad-tick" stroke-width="2.5"/>
+                <rect x="68" y="55" width="22" height="18" rx="3" class="grad-tag-bg"/>
+                <text x="79" y="68" class="grad-text-bold" text-anchor="middle">100</text>
+                
+                <!-- 75% / 375 mL -->
+                <line x1="42" y1="110" x2="65" y2="110" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="101" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="113" class="grad-text" text-anchor="middle">75%</text>
+
+                <!-- 50% / 250 mL -->
+                <line x1="42" y1="155" x2="65" y2="155" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="146" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="158" class="grad-text" text-anchor="middle">50%</text>
+
+                <!-- 25% / 125 mL -->
+                <line x1="42" y1="200" x2="65" y2="200" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="191" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="203" class="grad-text" text-anchor="middle">25%</text>
+
+                <!-- 0% / CRITICAL EMPTY -->
+                <line x1="42" y1="245" x2="72" y2="245" stroke="#ff0054" stroke-width="3"/>
+                <rect x="72" y="235" width="46" height="18" rx="4" fill="#ff0054"/>
+                <text x="95" y="248" fill="#ffffff" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" text-anchor="middle">EMPTY</text>
+              </g>
+
+              <!-- Transparent Infusion Drip Chamber -->
+              <rect x="114" y="260" width="12" height="14" rx="2" class="drip-chamber-neck"/>
+              <rect x="105" y="274" width="30" height="42" rx="4" class="drip-chamber-glass" stroke-width="2"/>
               
-              <!-- Clear Infusion Line Tubing -->
-              <line x1="100" y1="270" x2="100" y2="318" stroke="#224872" stroke-width="4.5" stroke-linecap="round"/>
-              <line x1="100" y1="270" x2="100" y2="318" stroke="#00f5d4" stroke-width="1.8" stroke-dasharray="6 14" opacity="0.8" id="tubing-fluid-core"/>
+              <!-- Drip Chamber Fluid Pool -->
+              <g clip-path="url(#chamberClip)">
+                <rect x="105" y="298" width="30" height="18" fill="url(#fluidGradSafe)" opacity="0.85"/>
+                <line x1="105" y1="298" x2="135" y2="298" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+              </g>
 
-              <!-- Fluid Droplet Animator -->
-              <circle id="drip-drop" cx="100" cy="275" r="3.5" fill="#00f5d4" opacity="0"/>
+              <!-- Infusion Drip Nozzle & Line Tubing -->
+              <line x1="120" y1="274" x2="120" y2="284" stroke="currentColor" stroke-width="2.5" opacity="0.7"/>
+              <line x1="120" y1="316" x2="120" y2="365" stroke="currentColor" opacity="0.3" stroke-width="5" stroke-linecap="round"/>
+              <line x1="120" y1="316" x2="120" y2="365" stroke="#00f5d4" stroke-width="2.2" stroke-dasharray="6 14" opacity="0.9" id="tubing-fluid-core"/>
+
+              <!-- Dynamic Fluid Droplet -->
+              <circle id="drip-drop" cx="120" cy="286" r="3.2" fill="#00f5d4" opacity="0"/>
             </svg>
           </div>
 
@@ -491,7 +562,7 @@
         </div>
       </div>
 
-      <button class="modal-close-btn" onclick="closeSettingsModal()" title="Close Dialog">
+      <button class="modal-close-btn" onclick="saveAndExitCalibration()" title="Save &amp; Return to Workstation">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -532,6 +603,16 @@
 
       <!-- ── TAB 1: SENSOR CALIBRATION ── -->
       <div id="tab-pane-calibration" class="tab-pane active">
+        
+        <!-- Live Calibration Status Banner -->
+        <div class="cal-live-sync-banner">
+          <div class="cal-pulse-dot"></div>
+          <div>
+            <span class="cal-sync-title">Hardware LCD Synced to Live Weight Stream</span>
+            <span class="cal-sync-sub">The 16×2 physical LCD on IV Measurement Unit 1 is displaying real-time transducer grams.</span>
+          </div>
+        </div>
+
         <div class="cal-dashboard-grid">
           
           <!-- Live Sensor Stream Header Card -->
@@ -540,7 +621,7 @@
             <div class="live-sensor-value-box">
               <div class="live-sensor-tag">LIVE TELEMETRY</div>
               <div class="live-sensor-number" id="cal-live-weight">0.0 g</div>
-              <div class="live-sensor-sub">Direct load cell measurement (HX711 Interface)</div>
+              <div class="live-sensor-sub">Transmitted in real-time to Physical LCD: <code>CALIBRATION MODE / WT: ...g</code></div>
             </div>
             <button class="btn btn-outline-warning w-100" id="btn-tare" onclick="sendTare()" disabled>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -602,6 +683,17 @@
           </div>
 
         </div>
+
+        <!-- Calibration Mode Footer Action -->
+        <div class="cal-footer-actions">
+          <button class="btn btn-primary btn-lg" onclick="saveAndExitCalibration()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Save Calibration &amp; Exit to Normal Telemetry Display</span>
+          </button>
+        </div>
+
       </div>
 
       <!-- ── TAB 2: DIAGNOSTICS & TELEMETRY CONSOLE ── -->

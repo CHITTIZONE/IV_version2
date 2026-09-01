@@ -1,16 +1,17 @@
 /* ╔══════════════════════════════════════════════════════════════════════════╗
    ║  IV SENTRY PRO™ — Clinical Infusion Telemetry CSS                       ║
-   ║  Medical Product Design System · Plus Jakarta Sans + Outfit + Mono     ║
+   ║  Medical Product Design System · Dark & Soothing Light Clinical Themes   ║
    ╚══════════════════════════════════════════════════════════════════════════╝ */
 
-:root {
-  /* Core Medical Color Palette */
+/* ── Default / Dark Clinical Theme Tokens ─────────────────────────────────── */
+:root, [data-theme="dark"] {
   --bg-deep:         #070d18;
   --bg-surface:      #0b1526;
   --bg-card:         #0e1b30;
   --bg-card-hover:   #12223c;
-  --bg-glass:        rgba(14, 27, 48, 0.75);
+  --bg-glass:        rgba(14, 27, 48, 0.85);
   --bg-input:        #081222;
+  --bg-modal-overlay:rgba(4, 8, 16, 0.88);
 
   --border-subtle:   rgba(32, 62, 100, 0.45);
   --border-card:     #1a3559;
@@ -37,6 +38,24 @@
   --text-muted:      #94a3b8;
   --text-dim:        #475569;
 
+  /* SVG & Background Accents */
+  --grid-line-color: rgba(0, 187, 249, 0.04);
+  --ecg-color:       rgba(0, 245, 212, 0.08);
+
+  /* 3D Realistic Bottle Tokens in Dark Mode */
+  --bag-glass-bg:    #091527;
+  --bag-border:      #254b7c;
+  --hanger-steel:    #4a729e;
+  --hanger-cap:      #173050;
+  --label-bg:        rgba(10, 24, 45, 0.85);
+  --label-border:    #1f4472;
+  --label-text-dark: #e2e8f0;
+  --label-text-dim:  #7ba5cc;
+  --grad-tick-color: #5591c8;
+  --grad-tag-bg:     rgba(8, 20, 38, 0.92);
+  --grad-text-color: #ffffff;
+  --chamber-glass:   #0b1c33;
+
   /* Typography Stack */
   --font-body:       'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display:    'Outfit', sans-serif;
@@ -50,8 +69,64 @@
 
   --shadow-subtle:   0 4px 20px rgba(0, 0, 0, 0.45);
   --shadow-hero:     0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-card);
-  --shadow-teal:     0 0 24px var(--teal-glow);
-  --shadow-rose:     0 0 35px var(--rose-glow);
+}
+
+/* ── Soothing Hospital Clinical Light Theme Tokens ───────────────────────── */
+[data-theme="light"] {
+  /* Soft soothing medical slate background (avoids stark bleached white) */
+  --bg-deep:         #eaf1f7;
+  --bg-surface:      #f5f9fc;
+  --bg-card:         #f5f9fc;
+  --bg-card-hover:   #edf4f9;
+  --bg-glass:        rgba(245, 249, 252, 0.94);
+  --bg-input:        #ffffff;
+  --bg-modal-overlay:rgba(12, 30, 54, 0.65);
+
+  --border-subtle:   #d4e4f2;
+  --border-card:     #cce0f0;
+  --border-glow:     rgba(2, 132, 199, 0.2);
+  --border-focus:    #0284c7;
+
+  /* Clinical Accents in Light Mode */
+  --teal-neon:       #0284c7;
+  --teal-glow:       rgba(2, 132, 199, 0.18);
+  --blue-vivid:      #0284c7;
+  --blue-deep:       #0369a1;
+  --blue-glow:       rgba(2, 132, 199, 0.18);
+
+  --emerald-safe:    #059669;
+  --emerald-glow:    rgba(5, 150, 105, 0.2);
+  --amber-warn:      #d97706;
+  --amber-glow:      rgba(217, 119, 6, 0.2);
+  --rose-crit:       #dc2626;
+  --rose-glow:       rgba(220, 38, 38, 0.25);
+
+  /* Deep High-Contrast Typography in Light Mode */
+  --text-pure:       #091e3a;
+  --text-lead:       #16325c;
+  --text-muted:      #4d6e94;
+  --text-dim:        #7b9ab8;
+
+  /* SVG & Background Accents in Light Mode */
+  --grid-line-color: rgba(2, 132, 199, 0.06);
+  --ecg-color:       rgba(2, 132, 199, 0.1);
+
+  /* 3D Realistic Bottle Tokens in Light Mode */
+  --bag-glass-bg:    #ffffff;
+  --bag-border:      #86a8cc;
+  --hanger-steel:    #5c7f9f;
+  --hanger-cap:      #cfdfee;
+  --label-bg:        rgba(255, 255, 255, 0.94);
+  --label-border:    #b0cde8;
+  --label-text-dark: #091e3a;
+  --label-text-dim:  #3a6088;
+  --grad-tick-color: #24507d;
+  --grad-tag-bg:     #ffffff;
+  --grad-text-color: #091e3a;
+  --chamber-glass:   #ffffff;
+
+  --shadow-subtle:   0 4px 18px rgba(12, 36, 64, 0.07);
+  --shadow-hero:     0 8px 30px rgba(12, 36, 64, 0.1), 0 0 0 1px var(--border-card);
 }
 
 /* ── Reset & Global ───────────────────────────────────────────────────────── */
@@ -68,25 +143,57 @@ html {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
   min-height: 100vh;
   background: var(--bg-deep);
-  background-image: 
-    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(0, 187, 249, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 85% 100%, rgba(0, 245, 212, 0.05) 0%, transparent 60%),
-    linear-gradient(180deg, #070d18 0%, #050a14 100%);
   overflow-x: hidden;
+  position: relative;
+}
+
+/* ── Medical Grid & ECG Pattern Background ────────────────────────────────── */
+.medical-bg-pattern {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
+}
+
+.medical-ecg-trace {
+  position: absolute;
+  bottom: 10%;
+  left: 0;
+  right: 0;
+  height: 120px;
+  opacity: 0.75;
+  background-repeat: repeat-x;
+  background-size: 800px 120px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 120'%3E%3Cpath d='M0,60 L200,60 L210,40 L220,80 L230,20 L245,100 L255,50 L265,65 L275,60 L500,60 L510,40 L520,80 L530,20 L545,100 L555,50 L565,65 L575,60 L800,60' fill='none' stroke='%2300f5d4' stroke-width='1.5' stroke-opacity='0.12'/%3E%3C/svg%3E");
+  animation: ecgFlow 30s linear infinite;
+}
+
+[data-theme="light"] .medical-ecg-trace {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 120'%3E%3Cpath d='M0,60 L200,60 L210,40 L220,80 L230,20 L245,100 L255,50 L265,65 L275,60 L500,60 L510,40 L520,80 L530,20 L545,100 L555,50 L565,65 L575,60 L800,60' fill='none' stroke='%230284c7' stroke-width='1.5' stroke-opacity='0.12'/%3E%3C/svg%3E");
+}
+
+@keyframes ecgFlow {
+  from { background-position: 0 0; }
+  to   { background-position: 800px 0; }
 }
 
 /* ── Custom Scrollbars ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-::-webkit-scrollbar-thumb { background: #1c3658; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #2b4f7c; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
+::-webkit-scrollbar-thumb { background: var(--border-card); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-/* ── Typography & Utilites ────────────────────────────────────────────────── */
+/* ── Typography & Utilities ───────────────────────────────────────────────── */
 .mono { font-family: var(--font-mono); }
 .metric-mono { font-family: var(--font-mono); font-feature-settings: 'tnum' on, 'zero' on; }
 .text-dim { color: var(--text-dim); }
@@ -102,7 +209,7 @@ body {
 /* ── Top Medical Header ───────────────────────────────────────────────────── */
 #app-header {
   height: 68px;
-  background: rgba(11, 21, 38, 0.88);
+  background: var(--bg-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-card);
@@ -113,7 +220,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-subtle);
 }
 
 .header-left { display: flex; align-items: center; }
@@ -135,6 +242,12 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 15px rgba(0, 245, 212, 0.2);
+}
+
+[data-theme="light"] .brand-badge-icon {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border-color: #7dd3fc;
+  color: #0284c7;
 }
 
 .brand-title {
@@ -170,11 +283,11 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(8, 18, 34, 0.8);
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
   padding: 6px 16px;
   border-radius: 30px;
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.06);
 }
 
 .unit-id-tag {
@@ -214,9 +327,9 @@ body {
 }
 
 .conn-pill.disconnected {
-  background: rgba(71, 85, 105, 0.2);
+  background: rgba(71, 85, 105, 0.12);
   color: var(--text-muted);
-  border: 1px solid rgba(71, 85, 105, 0.4);
+  border: 1px solid var(--border-card);
 }
 
 .conn-pill.connected {
@@ -247,7 +360,21 @@ body {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+/* ── Theme Switcher ───────────────────────────────────────────────────────── */
+.btn-theme-switch {
+  background: var(--bg-surface);
+  color: var(--text-lead);
+  border: 1px solid var(--border-card);
+  padding: 8px 14px;
+  gap: 6px;
+  border-radius: 20px;
+}
+.btn-theme-switch:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--blue-vivid);
 }
 
 /* ── Action Buttons ───────────────────────────────────────────────────────── */
@@ -288,7 +415,7 @@ body {
 }
 
 .btn-secondary {
-  background: rgba(14, 27, 48, 0.8);
+  background: var(--bg-surface);
   color: var(--text-lead);
   border: 1px solid var(--border-card);
 }
@@ -324,11 +451,12 @@ body {
 .btn-ghost:hover {
   color: var(--text-pure);
   border-color: var(--border-card);
-  background: rgba(255,255,255,0.03);
+  background: rgba(0,0,0,0.03);
 }
 
 .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
 .btn-xs { padding: 4px 9px; font-size: 0.72rem; }
+.btn-lg { padding: 14px 24px; font-size: 0.95rem; font-weight: 700; }
 
 /* ── Workstation Grid Layout ──────────────────────────────────────────────── */
 #main-grid {
@@ -339,6 +467,8 @@ body {
   grid-template-columns: 380px 1fr;
   gap: 24px;
   min-height: calc(100vh - 68px);
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Medical Cards ────────────────────────────────────────────────────────── */
@@ -349,11 +479,11 @@ body {
   box-shadow: var(--shadow-subtle);
   position: relative;
   overflow: hidden;
-  transition: border-color 0.25s, box-shadow 0.25s;
+  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.3s;
 }
 
 .card-glow {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-card);
+  box-shadow: var(--shadow-subtle);
 }
 
 .card-header {
@@ -363,6 +493,10 @@ body {
   gap: 12px;
   border-bottom: 1px solid var(--border-card);
   background: rgba(255, 255, 255, 0.015);
+}
+
+[data-theme="light"] .card-header {
+  background: rgba(234, 241, 247, 0.5);
 }
 
 .card-header-icon {
@@ -447,8 +581,8 @@ textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--blue-vivid);
-  box-shadow: 0 0 0 3px rgba(0, 187, 249, 0.2);
-  background: #091528;
+  box-shadow: 0 0 0 3px var(--border-glow);
+  background: var(--bg-surface);
 }
 
 input::placeholder, textarea::placeholder {
@@ -512,7 +646,7 @@ textarea {
 }
 
 .session-status-panel {
-  background: rgba(8, 18, 34, 0.7);
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
@@ -543,10 +677,11 @@ textarea {
   border-radius: 12px;
   letter-spacing: 0.06em;
 }
-.status-pill.status-standby { background: rgba(71, 85, 105, 0.25); color: var(--text-muted); border: 1px solid rgba(71, 85, 105, 0.4); }
+.status-pill.status-standby { background: rgba(71, 85, 105, 0.12); color: var(--text-muted); border: 1px solid var(--border-card); }
 .status-pill.status-running { background: var(--emerald-glow); color: var(--emerald-safe); border: 1px solid var(--emerald-safe); animation: pulseGreen 2s infinite; }
 .status-pill.status-stopped { background: rgba(255, 0, 84, 0.15); color: var(--rose-crit); border: 1px solid var(--rose-crit); }
 .status-pill.status-alarm   { background: var(--rose-glow); color: #fff; border: 1px solid var(--rose-crit); animation: pulseRed 0.7s infinite; }
+.status-pill.status-cal_mode{ background: var(--amber-glow); color: var(--amber-warn); border: 1px solid var(--amber-warn); }
 
 @keyframes pulseRed {
   0%, 100% { box-shadow: 0 0 6px var(--rose-glow); opacity: 1; }
@@ -563,7 +698,12 @@ textarea {
   border-radius: var(--radius-md);
   padding: 12px 20px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-subtle);
+}
+
+[data-theme="light"] .active-prescription-bar {
+  background: linear-gradient(90deg, #dbeafe, #e0f2fe);
+  border-color: #93c5fd;
 }
 
 .prescription-col {
@@ -595,8 +735,7 @@ textarea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border-color: #1c3c66;
-  box-shadow: var(--shadow-hero), 0 0 35px rgba(0, 187, 249, 0.08);
+  box-shadow: var(--shadow-hero);
 }
 
 .monitor-header {
@@ -635,11 +774,11 @@ textarea {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--teal-neon);
-  background: rgba(0, 245, 212, 0.1);
-  border: 1px solid rgba(0, 245, 212, 0.35);
+  background: var(--teal-glow);
+  border: 1px solid var(--border-glow);
   padding: 5px 14px;
   border-radius: var(--radius-sm);
-  box-shadow: 0 0 14px rgba(0, 245, 212, 0.2);
+  box-shadow: 0 0 14px var(--teal-glow);
 }
 
 .monitor-body {
@@ -651,18 +790,18 @@ textarea {
 
 .monitor-center-stage {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 32px;
   align-items: center;
 }
 
-/* SVG IV Bag Apparatus */
+/* ── 3D Realistic IV Infusion Bottle SVG Styles ────────────────────────────── */
 .iv-apparatus-wrapper {
   position: relative;
-  width: 200px;
-  height: 320px;
+  width: 240px;
+  height: 370px;
   margin: 0 auto;
-  filter: drop-shadow(0 8px 24px rgba(0, 187, 249, 0.25));
+  filter: drop-shadow(0 10px 28px var(--blue-glow));
 }
 
 #iv-svg {
@@ -670,11 +809,106 @@ textarea {
   height: 100%;
 }
 
+.iv-hanger-steel {
+  stroke: var(--hanger-steel);
+}
+
+.iv-hanger-cap {
+  fill: var(--hanger-cap);
+  stroke: var(--bag-border);
+  stroke-width: 1.2;
+}
+
+.iv-bottle-shell {
+  fill: var(--bag-glass-bg);
+  stroke: var(--bag-border);
+}
+
+/* Pharmaceutical Label Styling */
+.iv-label-bg {
+  fill: var(--label-bg);
+  stroke: var(--label-border);
+  stroke-width: 1;
+}
+
+.iv-label-heading {
+  font-family: var(--font-display);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  fill: var(--label-text-dark);
+}
+
+.iv-label-sub {
+  font-family: var(--font-body);
+  font-size: 6.5px;
+  font-weight: 600;
+  fill: var(--label-text-dim);
+}
+
+.iv-label-vol {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  fill: var(--teal-neon);
+}
+
+.iv-label-sterile {
+  font-family: var(--font-body);
+  font-size: 5.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: var(--label-text-dim);
+}
+
+.iv-label-unit {
+  font-family: var(--font-mono);
+  font-size: 5.5px;
+  font-weight: 700;
+  fill: var(--blue-vivid);
+}
+
+/* High-Contrast Graduation Scale */
+.grad-tick {
+  stroke: var(--grad-tick-color);
+}
+
+.grad-tag-bg {
+  fill: var(--grad-tag-bg);
+  stroke: var(--grad-tick-color);
+  stroke-width: 1;
+}
+
+.grad-text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--grad-text-color);
+}
+
+.grad-text-bold {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  fill: var(--teal-neon);
+}
+
+/* Drip Chamber Glass */
+.drip-chamber-neck {
+  fill: var(--hanger-cap);
+  stroke: var(--bag-border);
+}
+
+.drip-chamber-glass {
+  fill: var(--chamber-glass);
+  stroke: var(--bag-border);
+}
+
 /* Drip Animation */
 @keyframes fluidDrip {
-  0%   { cy: 275; opacity: 0.9; r: 3.5; }
-  80%  { cy: 310; opacity: 0.6; r: 2.8; }
-  100% { cy: 316; opacity: 0;   r: 1; }
+  0%   { cy: 286; opacity: 0.95; r: 3.2; }
+  80%  { cy: 326; opacity: 0.6; r: 2.5; }
+  100% { cy: 334; opacity: 0;   r: 1; }
 }
 
 .dripping {
@@ -689,7 +923,7 @@ textarea {
 }
 
 .vital-card {
-  background: rgba(8, 18, 34, 0.85);
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   padding: 16px 20px;
@@ -698,14 +932,13 @@ textarea {
 }
 
 .vital-card:hover {
-  border-color: rgba(0, 187, 249, 0.5);
+  border-color: var(--blue-vivid);
   transform: translateX(2px);
 }
 
 .vital-card-highlight {
-  border-color: rgba(0, 245, 212, 0.4);
-  background: linear-gradient(135deg, rgba(8, 20, 38, 0.9), rgba(0, 245, 212, 0.04));
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.08);
+  border-color: var(--teal-neon);
+  box-shadow: 0 0 20px var(--teal-glow);
 }
 
 .vital-card-header {
@@ -758,14 +991,14 @@ textarea {
   justify-content: space-between;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border-subtle);
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 /* ── Barometer Progress Track ─────────────────────────────────────────────── */
 .level-progress-wrapper {
-  background: rgba(8, 18, 34, 0.6);
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   padding: 14px 18px;
@@ -783,7 +1016,7 @@ textarea {
 
 .level-bar-rail {
   height: 12px;
-  background: #060e1a;
+  background: var(--bg-input);
   border-radius: 10px;
   border: 1px solid var(--border-card);
   overflow: hidden;
@@ -795,12 +1028,12 @@ textarea {
   border-radius: 10px;
   background: linear-gradient(90deg, #ff0054 0%, #ffb703 25%, #00bbf9 60%, #00f5d4 100%);
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 12px rgba(0, 245, 212, 0.5);
+  box-shadow: 0 0 12px var(--teal-glow);
 }
 
 /* ── Actuator Channels ────────────────────────────────────────────────────── */
 .actuator-channels-panel {
-  background: rgba(8, 18, 34, 0.75);
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   padding: 16px 20px;
@@ -832,7 +1065,7 @@ textarea {
 }
 
 .channel-card {
-  background: var(--bg-surface);
+  background: var(--bg-input);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -894,7 +1127,7 @@ textarea {
   box-shadow: 0 0 10px var(--rose-crit);
 }
 .channel-card.warning .channel-title {
-  color: #ff99bb;
+  color: var(--rose-crit);
 }
 .channel-card.warning .channel-status {
   color: var(--rose-crit);
@@ -905,7 +1138,7 @@ textarea {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(4, 8, 16, 0.85);
+  background: var(--bg-modal-overlay);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;
@@ -924,9 +1157,9 @@ textarea {
   border: 1px solid var(--border-card);
   border-radius: var(--radius-xl);
   width: 90%;
-  max-width: 900px;
+  max-width: 920px;
   max-height: 88vh;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border-card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -938,7 +1171,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-card);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .modal-title-group {
@@ -981,14 +1214,14 @@ textarea {
 }
 .modal-close-btn:hover {
   color: var(--text-pure);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* Modal Navigation Tabs */
 .modal-tabs {
   display: flex;
   padding: 0 26px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-deep);
   border-bottom: 1px solid var(--border-card);
   gap: 8px;
 }
@@ -1033,6 +1266,45 @@ textarea {
 }
 @keyframes tabFade { from { opacity: 0; } to { opacity: 1; } }
 
+/* ── Live Calibration Sync Banner ─────────────────────────────────────────── */
+.cal-live-sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(0, 245, 212, 0.12), rgba(0, 187, 249, 0.06));
+  border: 1px solid rgba(0, 245, 212, 0.35);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  margin-bottom: 18px;
+}
+
+[data-theme="light"] .cal-live-sync-banner {
+  background: linear-gradient(90deg, #e0f2fe, #f0fdfa);
+  border-color: #7dd3fc;
+}
+
+.cal-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--teal-neon);
+  box-shadow: 0 0 10px var(--teal-neon);
+  animation: pulseGreen 1.4s infinite;
+}
+
+.cal-sync-title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-pure);
+}
+
+.cal-sync-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 /* ── Calibration Tab Panes ────────────────────────────────────────────────── */
 .cal-dashboard-grid {
   display: grid;
@@ -1049,8 +1321,8 @@ textarea {
 
 .cal-card-live {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(14, 27, 48, 0.9), rgba(0, 187, 249, 0.05));
-  border-color: var(--blue-deep);
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-deep));
+  border-color: var(--blue-vivid);
 }
 
 .cal-card-title {
@@ -1069,7 +1341,7 @@ textarea {
 }
 
 .live-sensor-value-box {
-  background: #060f1c;
+  background: var(--bg-input);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 14px 18px;
@@ -1093,8 +1365,15 @@ textarea {
 }
 
 .live-sensor-sub {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-dim);
+}
+
+.live-sensor-sub code {
+  font-family: var(--font-mono);
+  background: rgba(0,0,0,0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .input-btn-row {
@@ -1110,7 +1389,13 @@ textarea {
   font-size: 0.76rem;
   color: var(--text-muted);
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cal-footer-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ── Diagnostics & Terminal ───────────────────────────────────────────────── */
@@ -1145,11 +1430,16 @@ textarea {
   color: #38ef7d;
 }
 
+[data-theme="light"] .terminal-view {
+  background: #0f172a;
+  color: #4ade80;
+}
+
 .terminal-input-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #040913;
+  background: var(--bg-input);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 6px 12px;
@@ -1172,7 +1462,7 @@ textarea {
 
 /* ── Event & Audit Log ────────────────────────────────────────────────────── */
 .event-log-view {
-  background: #040913;
+  background: var(--bg-input);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   padding: 10px;
@@ -1215,7 +1505,7 @@ textarea {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(8, 2, 6, 0.9);
+  background: var(--bg-modal-overlay);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   display: flex;
@@ -1330,7 +1620,7 @@ textarea {
     grid-template-columns: 1fr;
   }
   .monitor-center-stage {
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 240px 1fr;
   }
 }
 
@@ -1350,5 +1640,8 @@ textarea {
   }
   .actuator-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .cal-dashboard-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -11,17 +11,51 @@ const state = {
   reader:       null,
   writer:       null,
   connected:    false,
-  status:       'STANDBY',       // STANDBY | INFUSING | PAUSED | ALARM
+  status:       'STANDBY',       // STANDBY | INFUSING | PAUSED | ALARM | CAL_MODE
   weight:       0.0,
   level:        0,
   elapsed:      '00:00:00',
   calFull:      500.0,
   calEmpty:     50.0,
   calFactor:    2280.0,
+  calMode:      false,
   alarmActive:  false,
   sessionStart: null,
+  theme:        'dark',
   logs:         [],
 };
+
+// ── Theme Manager (Dark / Light Mode) ─────────────────────────────────────────
+function loadTheme() {
+  const saved = localStorage.getItem('iv_theme') || 'dark';
+  applyTheme(saved);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const target = current === 'dark' ? 'light' : 'dark';
+  applyTheme(target);
+  localStorage.setItem('iv_theme', target);
+  logEvent(`Clinical theme switched to ${target.toUpperCase()} mode.`, 'info');
+}
+
+function applyTheme(theme) {
+  state.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  const iconDark  = document.querySelector('.theme-icon-dark');
+  const iconLight = document.querySelector('.theme-icon-light');
+  const label     = document.getElementById('theme-label');
+
+  if (theme === 'light') {
+    if (iconDark) iconDark.classList.add('hidden');
+    if (iconLight) iconLight.classList.remove('hidden');
+    if (label) label.textContent = 'Light';
+  } else {
+    if (iconDark) iconDark.classList.remove('hidden');
+    if (iconLight) iconLight.classList.add('hidden');
+    if (label) label.textContent = 'Dark';
+  }
+}
 
 // ── Web Audio Clinical Alarm Generator ────────────────────────────────────────
 let audioCtx = null;
@@ -129,13 +163,10 @@ async function connectSerial() {
     enableControls(true);
     logEvent('IV Measurement Unit 1 linked via telemetry port.', 'success');
 
-    // Transmit handshake and sync calibration
+    // Transmit handshake ping to verify link without forcibly overwriting calibrations
     setTimeout(async () => {
       await sendCmd('PING');
-      await sendCmd(`CAL:FULL:${state.calFull}`);
-      await sendCmd(`CAL:EMPTY:${state.calEmpty}`);
-      await sendCmd(`CAL:FACTOR:${state.calFactor}`);
-    }, 600);
+    }, 500);
 
   } catch (err) {
     setConnStatus('disconnected', 'Offline');
@@ -185,32 +216,35 @@ async function readLoop() {
   }
 }
 
-// ── Packet Parser ─────────────────────────────────────────────────────────────
+// ── Packet Parser (Universal Support for all Firmware Output Formats) ────────
 function parseTelemetryLine(line) {
   appendSerialLog(line);
+  const trimmed = line.trim();
 
-  // WEIGHT telemetry
-  if (line.startsWith('WEIGHT:')) {
-    const raw = parseFloat(line.slice(7));
-    state.weight = !isNaN(raw) ? raw : 0.0;
-    
-    // Update numerical displays
-    const stW = document.getElementById('stat-weight');
-    const stKg = document.getElementById('stat-weight-kg');
-    const calLive = document.getElementById('cal-live-weight');
+  // 1. Match WEIGHT (WEIGHT:500.0, Weight: 500.0 g, Weight: 0.5 kg, WT: 500)
+  const weightMatch = trimmed.match(/^(?:WEIGHT|Weight|weight|WT|Wt):\s*([+-]?\d+(?:\.\d+)?)/i);
+  if (weightMatch) {
+    let raw = parseFloat(weightMatch[1]);
+    if (!isNaN(raw)) {
+      state.weight = raw;
 
-    if (stW) stW.textContent = state.weight.toFixed(1);
-    if (stKg) stKg.textContent = (state.weight / 1000).toFixed(3) + ' kg';
-    if (calLive) calLive.textContent = state.weight.toFixed(1) + ' g';
+      const stW = document.getElementById('stat-weight');
+      const stKg = document.getElementById('stat-weight-kg');
+      const calLive = document.getElementById('cal-live-weight');
 
-    // Estimate remaining fluid volume
-    computeRemainingVolume();
+      if (stW) stW.textContent = state.weight.toFixed(1);
+      if (stKg) stKg.textContent = (state.weight >= 10 ? (state.weight / 1000).toFixed(3) : state.weight.toFixed(3)) + ' kg';
+      if (calLive) calLive.textContent = state.weight.toFixed(1) + ' g';
+
+      computeRemainingVolume();
+    }
     return;
   }
 
-  // IV LEVEL %
-  if (line.startsWith('LEVEL:')) {
-    const lvl = parseInt(line.slice(6), 10);
+  // 2. Match LEVEL % (LEVEL:75, Level: 75, IV: 75%)
+  const levelMatch = trimmed.match(/^(?:LEVEL|Level|level|IV|iv):\s*(\d+)/i);
+  if (levelMatch) {
+    const lvl = parseInt(levelMatch[1], 10);
     if (!isNaN(lvl)) {
       state.level = Math.max(0, Math.min(100, lvl));
       updateIvBag(state.level);
@@ -218,9 +252,10 @@ function parseTelemetryLine(line) {
     return;
   }
 
-  // ELAPSED TIME
-  if (line.startsWith('TIME:')) {
-    state.elapsed = line.slice(5).trim();
+  // 3. ELAPSED TIME (TIME:00:01:23 or Time: 00:01:23)
+  const timeMatch = trimmed.match(/^(?:TIME|Time|time):\s*([0-9:]+)/i);
+  if (timeMatch) {
+    state.elapsed = timeMatch[1].trim();
     const lblT = document.getElementById('lbl-time');
     const stTC = document.getElementById('stat-time-center');
     if (lblT) lblT.textContent = state.elapsed;
@@ -228,14 +263,28 @@ function parseTelemetryLine(line) {
     return;
   }
 
-  // SYSTEM STATE
-  if (line.startsWith('STATUS:')) {
-    const rawStat = line.slice(7).trim();
+  // 4. SYSTEM STATE (STATUS:RUNNING, Status: RUNNING, RUN, STP)
+  const statusMatch = trimmed.match(/^(?:STATUS|Status|status):\s*(\w+)/i);
+  if (statusMatch) {
+    const rawStat = statusMatch[1].toUpperCase();
     let normalized = 'STANDBY';
-    if (rawStat === 'RUNNING') normalized = 'INFUSING';
-    else if (rawStat === 'STOPPED') normalized = 'PAUSED';
+    if (rawStat === 'RUNNING' || rawStat === 'RUN') normalized = 'INFUSING';
+    else if (rawStat === 'STOPPED' || rawStat === 'STP') normalized = 'PAUSED';
     else if (rawStat === 'ALARM') normalized = 'ALARM';
+    else if (rawStat === 'CAL_MODE') normalized = 'CAL_MODE';
     updateStatus(normalized);
+    return;
+  }
+
+  // CALIBRATION MODE RESPONSES
+  if (line.startsWith('CAL_MODE:')) {
+    const mode = line.slice(9).trim();
+    state.calMode = (mode === 'ACTIVE');
+    if (state.calMode) {
+      logEvent('IV Measurement Unit 1 entered Hardware LCD Calibration Mode.', 'info');
+    } else {
+      logEvent('IV Measurement Unit 1 exited Calibration Mode. Standard telemetry restored.', 'success');
+    }
     return;
   }
 
@@ -304,14 +353,16 @@ let waveOffset = 0;
 
 function updateIvBag(level) {
   level = Math.max(0, Math.min(100, level));
-  const bagHeight = 172; // Inner SVG reservoir bounds (y:48 to y:220)
-  const bagTopY   = 48;
+  const bagHeight = 190; // Inner SVG reservoir bounds (y:54 to y:244)
+  const bagTopY   = 54;
   const fillH     = (bagHeight * level) / 100;
   const fillY     = bagTopY + bagHeight - fillH;
 
   // Fluid rectangle geometry
   const fluidRect = document.getElementById('fluid-rect');
   if (fluidRect) {
+    fluidRect.setAttribute('x', '38');
+    fluidRect.setAttribute('width', '164');
     fluidRect.setAttribute('y', fillY);
     fluidRect.setAttribute('height', fillH);
 
@@ -387,7 +438,7 @@ function drawWaveSurface(fillY, fillH, level) {
     wave.setAttribute('d', '');
     return;
   }
-  const w = 140, x0 = 30;
+  const w = 164, x0 = 38;
   const amp = 3.5, wavePts = [];
   for (let i = 0; i <= w + 20; i += 8) {
     const y = fillY + amp * Math.sin((i + waveOffset) * 0.16);
@@ -403,8 +454,8 @@ function drawWaveSurface(fillY, fillH, level) {
 
 function animateWaveLoop() {
   waveOffset += 2;
-  const fillH = (172 * state.level) / 100;
-  const fillY = 48 + 172 - fillH;
+  const fillH = (190 * state.level) / 100;
+  const fillY = 54 + 190 - fillH;
   drawWaveSurface(fillY, fillH, state.level);
   requestAnimationFrame(animateWaveLoop);
 }
@@ -543,6 +594,16 @@ async function applyCalFactor() {
   logEvent(`Transducer gain factor set to ${val}.`, 'info');
 }
 
+// ── Save & Exit Calibration Mode ──────────────────────────────────────────────
+async function saveAndExitCalibration() {
+  saveCalibration();
+  if (state.connected) {
+    await sendCmd('CAL:MODE:EXIT');
+  }
+  closeSettingsModal();
+  logEvent('Calibration settings confirmed & saved. Telemetry display restored.', 'success');
+}
+
 // ── Generic Command Sender ────────────────────────────────────────────────────
 async function sendCmd(cmd) {
   if (!state.writer) return;
@@ -563,7 +624,7 @@ async function sendManualCmd() {
 }
 
 // ── Settings Modal & Tabs Controller ──────────────────────────────────────────
-function openSettingsModal(tab = 'calibration') {
+async function openSettingsModal(tab = 'calibration') {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.remove('hidden');
   
@@ -574,20 +635,39 @@ function openSettingsModal(tab = 'calibration') {
       switchSettingsTab(tab, b);
     }
   });
+
+  // If opening calibration tab and connected, instruct Unit 1 to switch physical LCD to live weight display
+  if (tab === 'calibration' && state.connected) {
+    await sendCmd('CAL:MODE:START');
+  }
 }
 
-function closeSettingsModal() {
+async function closeSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('hidden');
+  
+  // Send exit calibration command to hardware
+  if (state.connected) {
+    await sendCmd('CAL:MODE:EXIT');
+  }
 }
 
-function switchSettingsTab(tabName, btnElement) {
+async function switchSettingsTab(tabName, btnElement) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
 
   if (btnElement) btnElement.classList.add('active');
   const pane = document.getElementById(`tab-pane-${tabName}`);
   if (pane) pane.classList.add('active');
+
+  // Trigger hardware LCD calibration mode only if calibration tab is active
+  if (state.connected) {
+    if (tabName === 'calibration') {
+      await sendCmd('CAL:MODE:START');
+    } else {
+      await sendCmd('CAL:MODE:EXIT');
+    }
+  }
 }
 
 // ── Form Validation ───────────────────────────────────────────────────────────
@@ -677,6 +757,7 @@ function enableControls(enabled) {
 
 // ── Initialization ────────────────────────────────────────────────────────────
 (function initializeSystem() {
+  loadTheme();
   loadCalibration();
   updateIvBag(0);
   enableControls(false);
@@ -694,7 +775,7 @@ function enableControls(enabled) {
 
   // Modal ESC key handler
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeSettingsModal();
+    if (e.key === 'Escape') saveAndExitCalibration();
   });
 
   logEvent('IV Sentry Pro Workstation ready. Awaiting telemetry connection to Unit 1.', 'info');
