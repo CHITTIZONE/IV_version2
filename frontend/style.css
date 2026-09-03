@@ -1614,6 +1614,400 @@ textarea {
   box-shadow: 0 0 45px var(--emerald-glow);
 }
 
+/* ── Patient Vitals Input Section ─────────────────────────────────────────── */
+.vitals-input-section {
+  background: rgba(0, 187, 249, 0.04);
+  border: 1px dashed rgba(0, 187, 249, 0.28);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  transition: all 0.25s ease;
+}
+
+[data-theme="light"] .vitals-input-section {
+  background: rgba(2, 132, 199, 0.05);
+  border-color: rgba(2, 132, 199, 0.25);
+}
+
+.vitals-input-section:hover {
+  border-color: var(--blue-vivid);
+  background: rgba(0, 187, 249, 0.07);
+}
+
+.vitals-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.vitals-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--blue-vivid);
+  letter-spacing: 0.06em;
+}
+
+.vitals-live-tag {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(0, 245, 212, 0.15);
+  color: var(--teal-neon);
+  border: 1px solid rgba(0, 245, 212, 0.35);
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .vitals-live-tag {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.input-with-unit {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-unit input {
+  padding-right: 48px;
+}
+
+.input-unit-tag {
+  position: absolute;
+  right: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ── AI Predictive Flow Rate Cockpit (Right Hero Section) ─────────────────── */
+.card-ai-hero-wide {
+  margin-top: 24px;
+  background: linear-gradient(135deg, rgba(14, 27, 48, 0.96) 0%, rgba(22, 19, 52, 0.96) 50%, rgba(11, 24, 46, 0.96) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 12px 40px rgba(139, 92, 246, 0.18), var(--shadow-hero);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="light"] .card-ai-hero-wide {
+  background: linear-gradient(135deg, #f8fafc 0%, #f5f3ff 50%, #eff6ff 100%);
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 12px 36px rgba(139, 92, 246, 0.14), var(--shadow-subtle);
+}
+
+.ai-header-wide {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(139, 92, 246, 0.06);
+}
+
+[data-theme="light"] .ai-header-wide {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ai-badge-icon.large {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(0, 245, 212, 0.3));
+  border: 1.5px solid rgba(139, 92, 246, 0.6);
+  color: #c4b5fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+[data-theme="light"] .ai-badge-icon.large {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #7c3aed;
+  border-color: #a78bfa;
+}
+
+.ai-hero-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-pure);
+  letter-spacing: 0.01em;
+}
+
+.ai-body-wide {
+  padding: 24px;
+}
+
+/* ── 3-Column Wide Cockpit Grid ───────────────────────────────────────────── */
+.ai-hero-grid {
+  display: grid;
+  grid-template-columns: 270px 1fr 1.3fr;
+  gap: 22px;
+  align-items: stretch;
+}
+
+/* ── Column 1: Grand Gauge Meter ─────────────────────────────────────────── */
+.ai-gauge-hero-box {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .ai-gauge-hero-box {
+  background: #ffffff;
+  border-color: rgba(139, 92, 246, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.ai-gauge-box-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ai-gauge-container.large {
+  width: 100%;
+  max-width: 240px;
+  display: flex;
+  justify-content: center;
+}
+
+.ai-gauge-svg-large {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+#ai-gauge-needle-group {
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: 120px 120px;
+}
+
+.gauge-center-val-large {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 800;
+  fill: var(--text-pure);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gauge-center-unit-large {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  fill: var(--teal-neon);
+  letter-spacing: 0.06em;
+}
+
+[data-theme="light"] .gauge-center-unit-large {
+  fill: #0284c7;
+}
+
+.ai-gauge-footer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.gauge-footer-pill {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gauge-footer-pill.active {
+  background: rgba(0, 245, 212, 0.15);
+  color: var(--teal-neon);
+  border-color: rgba(0, 245, 212, 0.4);
+  font-weight: 700;
+}
+
+[data-theme="light"] .gauge-footer-pill {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .gauge-footer-pill.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #7dd3fc;
+}
+
+/* ── Column 2: 4 Large Biometrics Cockpit Tiles ───────────────────────────── */
+.ai-vitals-cockpit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+
+.ai-vital-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.25s ease;
+}
+
+.ai-vital-tile:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+}
+
+[data-theme="light"] .ai-vital-tile {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+[data-theme="light"] .ai-vital-tile:hover {
+  background: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.ai-vital-tile.highlight-tile {
+  background: linear-gradient(135deg, rgba(0, 187, 249, 0.12), rgba(0, 245, 212, 0.06));
+  border-color: rgba(0, 187, 249, 0.4);
+}
+
+[data-theme="light"] .ai-vital-tile.highlight-tile {
+  background: linear-gradient(135deg, #e0f2fe, #f0fdf4);
+  border-color: #7dd3fc;
+}
+
+.a-tile-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pulse-icon { background: rgba(255, 0, 84, 0.15); color: #ff3366; }
+.bp-icon    { background: rgba(0, 187, 249, 0.15); color: var(--blue-vivid); }
+.drip-icon  { background: rgba(0, 245, 212, 0.2);  color: var(--teal-neon); }
+.time-icon  { background: rgba(255, 183, 3, 0.15); color: var(--amber-warn); }
+
+[data-theme="light"] .pulse-icon { background: #ffe4e6; color: #e11d48; }
+[data-theme="light"] .bp-icon    { background: #e0f2fe; color: #0284c7; }
+[data-theme="light"] .drip-icon  { background: #ccfbf1; color: #0f766e; }
+[data-theme="light"] .time-icon  { background: #fef3c7; color: #d97706; }
+
+.a-tile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.a-tile-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.a-tile-val {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-pure);
+  margin: 3px 0 1px;
+}
+
+.a-tile-sub {
+  font-size: 0.64rem;
+  color: var(--text-dim);
+}
+
+/* ── Column 3: AI Clinical Assessment Box ─────────────────────────────────── */
+.ai-summary-cockpit-box {
+  background: rgba(139, 92, 246, 0.08);
+  border-left: 4px solid #8b5cf6;
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
+  border-right: 1px solid rgba(139, 92, 246, 0.2);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+[data-theme="light"] .ai-summary-cockpit-box {
+  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.25);
+  border-left-color: #7c3aed;
+}
+
+.large-narrative {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-lead);
+  margin: 10px 0 16px;
+}
+
+.ai-action-cockpit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .ai-action-cockpit-row {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Responsive Adaptations for Cockpit ──────────────────────────────────── */
+@media (max-width: 1400px) {
+  .ai-hero-grid {
+    grid-template-columns: 240px 1fr 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .ai-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 /* ── Responsive Adaptations ───────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   #main-grid {

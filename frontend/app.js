@@ -23,6 +23,14 @@ const state = {
   sessionStart: null,
   theme:        'dark',
   logs:         [],
+  aiPrediction: {
+    flowRate:   125,
+    dripRate:   42,
+    etaHours:   '4.0',
+    hemoStatus: 'STABLE EUVOLEMIC',
+    statusClass:'status-stable',
+    summary:    ''
+  }
 };
 
 // ── Theme Manager (Dark / Light Mode) ─────────────────────────────────────────
@@ -501,6 +509,10 @@ function showActivePrescriptionBar() {
   document.getElementById('p-name').textContent = getPatientName();
   document.getElementById('p-id').textContent   = document.getElementById('inp-patient-id').value.trim() || '—';
   document.getElementById('p-saline').textContent = document.getElementById('inp-saline-type').value;
+  const aiRateEl = document.getElementById('p-ai-rate');
+  if (aiRateEl) {
+    aiRateEl.textContent = `${state.aiPrediction.flowRate} mL/hr (${state.aiPrediction.dripRate} gtt/m)`;
+  }
   bar.classList.remove('hidden');
 }
 
@@ -755,6 +767,182 @@ function enableControls(enabled) {
   if (emptyBtn) emptyBtn.disabled = !enabled;
 }
 
+// ── AI Predictive Saline Flow Rate & Clinical Intelligence Engine ─────────────
+let aiDebounceTimer = null;
+
+function triggerAiPrediction() {
+  clearTimeout(aiDebounceTimer);
+  aiDebounceTimer = setTimeout(calculateAiFlowPrediction, 120);
+}
+
+function calculateAiFlowPrediction() {
+  const age       = parseFloat(document.getElementById('inp-patient-age')?.value) || 42;
+  const hr        = parseFloat(document.getElementById('inp-patient-hr')?.value) || 75;
+  const rr        = parseFloat(document.getElementById('inp-patient-rr')?.value) || 16;
+  const sbp       = parseFloat(document.getElementById('inp-patient-sbp')?.value) || 120;
+  const dbp       = parseFloat(document.getElementById('inp-patient-dbp')?.value) || 80;
+  const solType   = document.getElementById('inp-saline-type')?.value || '0.9% Normal Saline (NS)';
+  const targetVol = parseFloat(document.getElementById('inp-saline-volume')?.value) || 500;
+
+  // Baseline maintenance flow rate
+  let baseRate = 125; // standard adult maintenance mL/hr
+  let hemoStatus = 'STABLE EUVOLEMIC';
+  let statusClass = 'status-stable';
+  let reasoning = [];
+
+  // Age factor
+  if (age < 12) {
+    baseRate = Math.max(40, Math.round(age * 5 + 20));
+    reasoning.push(`Pediatric baseline calibrated for age ${age}`);
+  } else if (age > 75) {
+    baseRate = 80;
+    reasoning.push('Geriatric cardiac reserve compensation applied');
+  }
+
+  // Blood Pressure & Shock Index heuristics
+  if (sbp < 90 || dbp < 55) {
+    // Hypotension / Hypovolemic state -> Fluid resuscitation needed
+    baseRate = Math.min(240, Math.max(175, baseRate + 80));
+    hemoStatus = 'HYPOTENSIVE RESUSCITATION';
+    statusClass = 'status-critical';
+    reasoning.push(`Systolic BP (${sbp} mmHg) indicates low perfusion pressure — fluid resuscitation flow indicated`);
+  } else if (sbp > 160 || dbp > 100) {
+    // Stage 2 Hypertension -> Strict fluid restriction to prevent acute pulmonary edema
+    baseRate = Math.max(50, Math.min(75, baseRate - 50));
+    hemoStatus = 'HYPERTENSIVE RESTRICTED';
+    statusClass = 'status-caution';
+    reasoning.push(`High blood pressure (${sbp}/${dbp} mmHg) requires conservative rate to mitigate cardiovascular strain`);
+  } else if (sbp >= 140 || dbp >= 90) {
+    baseRate = Math.max(75, baseRate - 25);
+    hemoStatus = 'MILD HYPERTENSIVE';
+    statusClass = 'status-caution';
+    reasoning.push(`Mildly elevated BP (${sbp}/${dbp} mmHg) — conservative maintenance suggested`);
+  }
+
+  // Heart Rate (Pulse) heuristics
+  if (hr > 110 && sbp <= 135) {
+    // Tachycardia with non-hypertensive state -> likely dehydration/hypovolemia
+    baseRate = Math.min(220, baseRate + 35);
+    if (statusClass === 'status-stable') {
+      hemoStatus = 'TACHYCARDIC HYDRATION';
+      statusClass = 'status-caution';
+    }
+    reasoning.push(`Elevated pulse (${hr} bpm) suggests dehydration compensatory response`);
+  } else if (hr < 52) {
+    // Bradycardia
+    baseRate = Math.max(50, Math.min(90, baseRate - 20));
+    if (statusClass === 'status-stable') {
+      hemoStatus = 'BRADYCARDIC CAUTION';
+      statusClass = 'status-caution';
+    }
+    reasoning.push(`Low heart rate (${hr} bpm) observed — monitored slow infusion recommended`);
+  }
+
+  // Respiration Rate factor
+  if (rr > 26) {
+    reasoning.push(`Tachypnea (${rr} bpm) factored for metabolic demand`);
+  }
+
+  // Infusion solution adjustment
+  if (solType.includes('0.45%')) {
+    baseRate = Math.min(100, baseRate);
+    reasoning.push('Hypotonic solution (0.45% NS) regulated for safe cellular osmolarity');
+  } else if (solType.includes('Ringer')) {
+    reasoning.push("Ringer's Lactate selected for balanced electrolyte resuscitation");
+  }
+
+  // Final flow rate clamp (50 mL/hr to 250 mL/hr)
+  const finalFlowRate = Math.max(50, Math.min(250, Math.round(baseRate / 5) * 5));
+  
+  // Drip rate (gtt/min) for standard 20 gtt/mL IV set: (mL/hr * 20) / 60 = mL/hr / 3
+  const dripRate = Math.round((finalFlowRate * 20) / 60);
+  const etaHours = (targetVol / finalFlowRate).toFixed(1);
+
+  // Store in state
+  state.aiPrediction.flowRate    = finalFlowRate;
+  state.aiPrediction.dripRate    = dripRate;
+  state.aiPrediction.etaHours    = etaHours;
+  state.aiPrediction.hemoStatus  = hemoStatus;
+  state.aiPrediction.statusClass = statusClass;
+
+  // Build AI clinical overview narrative
+  let narrative = `Patient vitals (HR: <strong>${hr} bpm</strong>, BP: <strong>${sbp}/${dbp} mmHg</strong>, RR: <strong>${rr} bpm</strong>) evaluated for <strong>${solType}</strong>. `;
+  if (reasoning.length > 0) {
+    narrative += reasoning.join('. ') + '. ';
+  }
+  narrative += `Optimal target flow rate predicted at <strong>${finalFlowRate} mL/hr</strong> (approx. <strong>${dripRate} drops/min</strong> on 20 gtt/mL set). Expected duration for ${targetVol} mL reservoir is <strong>${etaHours} hours</strong>.`;
+  state.aiPrediction.summary = narrative;
+
+  // Render UI updates
+  updateAiGaugeUI();
+}
+
+function updateAiGaugeUI() {
+  const p = state.aiPrediction;
+
+  // Update needle angle (-90deg at 50 mL/hr to +90deg at 250 mL/hr)
+  const needle = document.getElementById('ai-gauge-needle-group');
+  if (needle) {
+    const fraction = Math.max(0, Math.min(1, (p.flowRate - 50) / 200));
+    const angle = -90 + (fraction * 180);
+    needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+  }
+
+  // Update digital center readout
+  const valEl = document.getElementById('ai-gauge-value');
+  if (valEl) valEl.textContent = p.flowRate;
+
+  // Update pill badges
+  const hrEl  = document.getElementById('ai-disp-hr');
+  const bpEl  = document.getElementById('ai-disp-bp');
+  const dripEl= document.getElementById('ai-disp-drip');
+  const etaEl = document.getElementById('ai-disp-eta');
+
+  const hrVal  = document.getElementById('inp-patient-hr')?.value || '75';
+  const sbpVal = document.getElementById('inp-patient-sbp')?.value || '120';
+  const dbpVal = document.getElementById('inp-patient-dbp')?.value || '80';
+
+  if (hrEl)   hrEl.textContent   = `${hrVal} bpm`;
+  if (bpEl)   bpEl.textContent   = `${sbpVal}/${dbpVal}`;
+  if (dripEl) dripEl.textContent = `${p.dripRate} gtt/m`;
+  if (etaEl)  etaEl.textContent  = `${p.etaHours} hrs`;
+
+  // Update status badge
+  const badge = document.getElementById('ai-hemo-badge');
+  if (badge) {
+    badge.textContent = p.hemoStatus;
+    badge.className = `ai-status-badge ${p.statusClass}`;
+  }
+
+  // Update AI Overview narrative paragraph
+  const textEl = document.getElementById('ai-overview-text');
+  if (textEl) textEl.innerHTML = p.summary;
+
+  // Update Active prescription bar if active
+  const barAiRate = document.getElementById('p-ai-rate');
+  if (barAiRate) {
+    barAiRate.textContent = `${p.flowRate} mL/hr (${p.dripRate} gtt/m)`;
+  }
+}
+
+function applyAiFlowRateToNotes() {
+  const notesEl = document.getElementById('inp-notes');
+  if (!notesEl) return;
+  const p = state.aiPrediction;
+  const hrVal  = document.getElementById('inp-patient-hr')?.value || '75';
+  const sbpVal = document.getElementById('inp-patient-sbp')?.value || '120';
+  const dbpVal = document.getElementById('inp-patient-dbp')?.value || '80';
+
+  const entry = `[AI PRESCRIBED RATE]: ${p.flowRate} mL/hr (${p.dripRate} gtt/min) | Vitals: HR ${hrVal} bpm, BP ${sbpVal}/${dbpVal} mmHg | Status: ${p.hemoStatus}`;
+  
+  if (notesEl.value.includes('[AI PRESCRIBED RATE]')) {
+    notesEl.value = notesEl.value.replace(/\[AI PRESCRIBED RATE\]:[^\n]*/, entry);
+  } else {
+    notesEl.value = (notesEl.value ? notesEl.value.trim() + '\n' : '') + entry;
+  }
+  logEvent(`AI flow recommendation (${p.flowRate} mL/hr) applied to clinical notes.`, 'info');
+}
+
 // ── Initialization ────────────────────────────────────────────────────────────
 (function initializeSystem() {
   loadTheme();
@@ -762,6 +950,7 @@ function enableControls(enabled) {
   updateIvBag(0);
   enableControls(false);
   animateWaveLoop();
+  calculateAiFlowPrediction();
 
   // Listen for Enter in manual packet terminal
   document.addEventListener('DOMContentLoaded', () => {
