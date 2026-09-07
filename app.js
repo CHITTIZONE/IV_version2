@@ -1457,51 +1457,22 @@ async function startAutoCalibration() {
   logEvent('⚡ Auto-Calibration Initiated: Transducer automatically zeroed to 0.00 g.', 'success');
 }
 
-// ── Doctor's Printable Infusion Completion Report Generator ───────────────────
-async function completeInfusionSession(fromUser = true) {
-  if (state.tripCompleted) return;
-  state.tripCompleted = true;
-  initAudio();
-  stopLocalTimer();
-  state.sessionEnd = new Date();
-  state.status = 'COMPLETED';
-
-  // Only send completion command to Arduino hardware if initiated by user on the website
-  if (fromUser && state.connected) {
-    try {
-      await sendCmd('CMD:COMPLETE');
-    } catch (_) {}
+function updateDoctorReportData() {
+  if (!state.sessionEnd) {
+    state.sessionEnd = new Date();
   }
 
-  // System status pill update
-  const pill = document.getElementById('lbl-status');
-  if (pill) {
-    pill.textContent = 'COMPLETED';
-    pill.className = 'status-pill status-completed';
-  }
-
-  const btnStart = document.getElementById('btn-start');
-  const btnStop  = document.getElementById('btn-stop');
-  if (btnStart) btnStart.disabled = false;
-  if (btnStop)  btnStop.disabled  = true;
-
-  // Use the stopped state.elapsed if valid; otherwise compute from timestamps
+  // Use state.elapsed if valid; otherwise compute from timestamps
   let durationStr = (state.elapsed && state.elapsed !== '00:00:00') ? state.elapsed : '00:00:00';
   let totalSecs = state.accumulatedSec || 0;
   if (durationStr === '00:00:00' && state.sessionStart) {
-    totalSecs = Math.max(1, Math.floor((state.sessionEnd.getTime() - state.sessionStart.getTime()) / 1000));
+    totalSecs = Math.max(1, Math.floor(((state.sessionEnd || new Date()).getTime() - state.sessionStart.getTime()) / 1000));
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
     durationStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
   state.elapsed = durationStr;
-
-  // Freeze the timer on the workstation dashboard!
-  const stTC = document.getElementById('stat-time-center');
-  const lblT = document.getElementById('lbl-time');
-  if (stTC) stTC.textContent = durationStr;
-  if (lblT) lblT.textContent = durationStr;
 
   const totalSecsFinal = Math.max(1, totalSecs);
   const hrs = Math.floor(totalSecsFinal / 3600);
@@ -1511,19 +1482,19 @@ async function completeInfusionSession(fromUser = true) {
   const durationHours = Math.max(0.01, durationMs / 3600000);
 
   // Gather patient inputs
-  const pName = document.getElementById('inp-patient-name').value.trim() || 'Alexander Wright';
-  const pId   = document.getElementById('inp-patient-id').value.trim() || 'MED-8841';
-  const pAge  = document.getElementById('inp-patient-age').value.trim() || '42';
-  const pBed  = document.getElementById('inp-bed-no').value.trim() || 'Bed 04-A (Stepdown)';
-  const pAtt  = document.getElementById('inp-attender-name').value.trim() || 'Nurse Sarah Jenkins, RN';
-  const pSol  = document.getElementById('inp-saline-type').value || '0.9% Normal Saline (NS)';
-  const pVol  = parseFloat(document.getElementById('inp-saline-volume').value) || 500.0;
-  const pNotes = document.getElementById('inp-notes').value.trim() || 'Continuous telemetry verified. Normal saline infusion completed per protocol.';
+  const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Alexander Wright';
+  const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'MED-8841';
+  const pAge  = document.getElementById('inp-patient-age')?.value.trim() || '42';
+  const pBed  = document.getElementById('inp-bed-no')?.value.trim() || 'Bed 04-A';
+  const pAtt  = document.getElementById('inp-attender-name')?.value.trim() || 'Nurse Sarah Jenkins, RN';
+  const pSol  = document.getElementById('inp-saline-type')?.value || '0.9% Normal Saline (NS)';
+  const pVol  = parseFloat(document.getElementById('inp-saline-volume')?.value) || 500.0;
+  const pNotes = document.getElementById('inp-notes')?.value.trim() || 'Continuous telemetry verified. Normal saline infusion completed per protocol.';
 
-  const hrVal  = document.getElementById('inp-patient-hr').value || '76';
-  const rrVal  = document.getElementById('inp-patient-rr').value || '16';
-  const sbpVal = document.getElementById('inp-patient-sbp').value || '120';
-  const dbpVal = document.getElementById('inp-patient-dbp').value || '80';
+  const hrVal  = document.getElementById('inp-patient-hr')?.value || '76';
+  const rrVal  = document.getElementById('inp-patient-rr')?.value || '16';
+  const sbpVal = document.getElementById('inp-patient-sbp')?.value || '120';
+  const dbpVal = document.getElementById('inp-patient-dbp')?.value || '80';
 
   // Volumetric outcome
   const residualPct = state.level || 0;
@@ -1532,9 +1503,9 @@ async function completeInfusionSession(fromUser = true) {
   const residualVol = (pVol - parseFloat(injectedVol)).toFixed(1);
   const avgFlowRate = (parseFloat(injectedVol) / durationHours).toFixed(1);
 
-  const startEpoch = state.sessionStart ? state.sessionStart : new Date(state.sessionEnd.getTime() - durationMs);
+  const startEpoch = state.sessionStart ? state.sessionStart : new Date((state.sessionEnd || new Date()).getTime() - durationMs);
   const startStr = startEpoch.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
-  const endStr   = state.sessionEnd.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+  const endStr   = (state.sessionEnd || new Date()).toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
   const nowStr   = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
   const reportRef = `IVR-${pId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
 
@@ -1576,24 +1547,64 @@ async function completeInfusionSession(fromUser = true) {
     ? 'RESERVOIR DEPLETED (< 10%) — INFUSION HALTED SAFELY FOR BAG REPLACEMENT'
     : (injectedPct >= 95 ? 'TRIP COMPLETED — FULL PRESCRIBED DOSE ADMINISTERED' : 'INFUSION PAUSED / PARTIAL DELIVERY');
   setEl('rep-trip-outcome', outcomeText);
+}
+
+// ── Doctor's Printable Infusion Completion Report Generator ───────────────────
+async function completeInfusionSession(fromUser = true) {
+  state.tripCompleted = true;
+  initAudio();
+  stopLocalTimer();
+  state.sessionEnd = new Date();
+  state.status = 'COMPLETED';
+
+  // Only send completion command to Arduino hardware if initiated by user on the website
+  if (fromUser && state.connected) {
+    try {
+      await sendCmd('CMD:COMPLETE');
+    } catch (_) {}
+  }
+
+  // System status pill update
+  const pill = document.getElementById('lbl-status');
+  if (pill) {
+    pill.textContent = 'COMPLETED';
+    pill.className = 'status-pill status-completed';
+  }
+
+  const btnStart = document.getElementById('btn-start');
+  const btnStop  = document.getElementById('btn-stop');
+  if (btnStart) btnStart.disabled = false;
+  if (btnStop)  btnStop.disabled  = true;
+
+  updateDoctorReportData();
 
   // Play celebration / completion sound if not in alarm state
+  const residualPct = state.level || 0;
   if (residualPct >= 10) {
     playBuzzerBeeps(3, 2600, 160, 90);
   }
-  logEvent(`🏁 Infusion Trip Completed for ${pName}. Total Injected: ${injectedVol} mL in ${durationStr}. Doctor's Report prepared.`, 'success');
+  const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
+  logEvent(`🏁 Infusion Trip Completed for ${pName}. Total Injected: ${document.getElementById('rep-saline-injected')?.textContent || 0} mL in ${state.elapsed}. Doctor's Report prepared.`, 'success');
 
   // Open the printable report modal for view and download
-  openDoctorReportModal();
+  openDoctorReportModal(false);
 }
 
-function openDoctorReportModal() {
+function openDoctorReportModal(autoDownload = false) {
   acknowledgeAlarm(); // Mute alarm and dismiss warning overlay so report modal is visible
   if (!state.tripCompleted) {
     completeInfusionSession(false);
+  } else {
+    updateDoctorReportData();
   }
   const modal = document.getElementById('report-modal');
   if (modal) modal.classList.remove('hidden');
+
+  if (autoDownload) {
+    setTimeout(() => {
+      printDoctorReport();
+    }, 400);
+  }
 }
 
 function closeDoctorReportModal() {
@@ -1603,8 +1614,9 @@ function closeDoctorReportModal() {
 }
 
 function printDoctorReport() {
-  const pName = document.getElementById('inp-patient-name').value.trim() || 'Patient';
-  const pId   = document.getElementById('inp-patient-id').value.trim() || 'ID';
+  updateDoctorReportData();
+  const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
+  const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'ID';
   const origTitle = document.title;
   document.title = `Clinical_Infusion_Report_${pName.replace(/\s+/g, '_')}_${pId}`;
   window.print();
@@ -1614,14 +1626,15 @@ function printDoctorReport() {
 }
 
 function copyReportSummary() {
-  const pName = document.getElementById('inp-patient-name').value.trim() || 'Patient';
-  const pId   = document.getElementById('inp-patient-id').value.trim() || 'ID';
-  const pBed  = document.getElementById('inp-bed-no').value.trim() || 'Bed';
-  const pSol  = document.getElementById('inp-saline-type').value || 'Normal Saline';
-  const injVol = document.getElementById('rep-saline-injected').textContent || '500';
-  const dur    = document.getElementById('rep-time-duration').textContent || '00:00:00';
-  const startT = document.getElementById('rep-time-started').textContent || '—';
-  const endT   = document.getElementById('rep-time-ended').textContent || '—';
+  updateDoctorReportData();
+  const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
+  const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'ID';
+  const pBed  = document.getElementById('inp-bed-no')?.value.trim() || 'Bed';
+  const pSol  = document.getElementById('inp-saline-type')?.value || 'Normal Saline';
+  const injVol = document.getElementById('rep-saline-injected')?.textContent || '500';
+  const dur    = document.getElementById('rep-time-duration')?.textContent || '00:00:00';
+  const startT = document.getElementById('rep-time-started')?.textContent || '—';
+  const endT   = document.getElementById('rep-time-ended')?.textContent || '—';
 
   const text = `CLINICAL INFUSION DELIVERY REPORT — IV SENTRY PRO™\n` +
     `Patient: ${pName} (MRN: ${pId}) | Bed: ${pBed}\n` +
@@ -1641,6 +1654,8 @@ function copyReportSummary() {
 function downloadDoctorReportText() {
   if (!state.tripCompleted) {
     completeInfusionSession(false);
+  } else {
+    updateDoctorReportData();
   }
   const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
   const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'MED-8841';

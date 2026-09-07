@@ -1,77 +1,83 @@
-# Implementation Plan — Critical <10% Fluid Threshold, 5s Buzzer Alarm & Doctor Report Generation
+# Implementation Plan — Doctor Report Dynamic Data Update & Download Fix
 
 **System:** IV SENTRY PRO™ Clinical Infusion Telemetry Workstation  
-**Hardware Controller:** Arduino Uno / Nano + HX711 Load Cell + Pin D3 Acoustic Buzzer + 16x2 I2C LCD  
-**Current Status:** Critical <10% Automation & Complete Doctor's Report (View & Download) Implementation  
-**Last Updated:** 2026-09-07 23:45:00 (IST)
+**Hardware & Subsystem:** Web Telemetry Dashboard (`app.js`, `frontend/app.js`, `index.html`, `frontend/index.html`)  
+**Goal:** Guarantee that all Doctor's Report views and downloads (Text file download, PDF print, copy summary, report modal view) dynamically refresh and export 100% accurate, up-to-date session values (Patient Demographics, Vitals, Start/End Timestamps, Elapsed Duration, Injected Volume, Residual Volume, Average Flow Rate, AI Prescriptions, and Pin D3 Audit Milestones).
 
 ---
 
-## 1. Problem Overview & Requirements
-When the IV fluid level drops below 10% (`< 10%`):
-1. **Stop the Timer Immediately**:
-   - Hardware: Lock `elapsedTime = millis() - startTime` and set `timerRunning = false`.
-   - Web App: Call `stopLocalTimer()` to halt the local stopwatch interval, freeze `#stat-time-center` and `#lbl-time` without drift.
-2. **Sound Buzzer for Exactly 5 Seconds**:
-   - Hardware: Execute `beepAlarm5Seconds()` (rapid 2800 Hz alert pulses for 5000ms), followed by `noTone(BUZZER_PIN); digitalWrite(BUZZER_PIN, LOW);` to ensure the buzzer completely silences after 5 seconds.
-   - Web App: Synthesize 5 seconds of audio alert via Web Audio API (`playBuzzerBeeps(12, 2800, 250, 160)`).
-3. **Place the Warning Popup**:
-   - Display `#alarm-overlay` with critical alert messaging: "CRITICAL INFUSION ALERT — Saline reservoir below 10%! Infusion Halted & Doctor Report Generated."
-   - Provide "View & Download Doctor's Report" action button + "Mute Alarm" button.
-4. **Generate the Complete Report to User in View and Download Manner**:
-   - Compile clinical vitals, patient demographics, infused saline volume (mL), residual volume, injection duration, actual flow rate, AI osmotherapy prescription, and D3 buzzer milestone audit table.
-   - Open `#report-modal` so the user can immediately **VIEW** the complete official report on screen.
-   - Provide multiple **DOWNLOAD** options:
-     - **Print Doctor Report (A4 / PDF)** via `window.print()`.
-     - **Download Report (.txt)** via `downloadDoctorReportText()`.
-     - **Copy Summary** to clipboard.
-5. **Fix LCD Garbage Characters & Infinite Serial Ping-Pong Loop**:
-   - Format 16x2 LCD output with fixed 16-character padded buffers (`snprintf`) to eliminate corrupted trailing characters.
-   - Guard `CMD:COMPLETE` and `completeInfusionSession()` with `sessionCompletedEmitted` and `state.tripCompleted` guards to prevent infinite serial ping-pong loops and continuous buzzer beeping.
+## 1. Problem Analysis & Root Cause
+
+1. **Static Data Freeze on `tripCompleted`**:
+   - `completeInfusionSession()` previously checked `if (state.tripCompleted) return;`. Once `state.tripCompleted` was set to `true` (e.g. when level hit `< 10%`), any subsequent attempt to refresh the report (or click "View Doctor's Report" / "Download (.txt)") returned immediately without re-calculating or updating the DOM elements with updated inputs, vitals, or end times.
+2. **Disconnected Report Data Pipeline**:
+   - `downloadDoctorReportText()` depended on reading pre-rendered DOM elements (e.g., `#rep-time-duration`, `#rep-saline-injected`). If those DOM elements were stale or unpopulated, the downloaded `.txt` file contained default placeholders (`—`, `00:00:00`).
+3. **Milestone Audit Table Synchronization**:
+   - The D3 buzzer audit milestone table rows (`90%`, `75%`, `65%`, `50%`, `35%`, `25%`, `< 10%`) were not explicitly re-synced during report generation, leaving milestone trigger times unpopulated.
 
 ---
 
-## 2. Proposed Changes
+## 2. Proposed Architecture & Solution
 
-### Component 1: Arduino Firmware (`sketch_jan13a.ino` & `sketch_jan13a/sketch_jan13a.ino`)
-- **[MODIFY] `sketch_jan13a.ino`**:
-  - Add `beepAlarm5Seconds()` helper function: loops for 5000 ms with 2800 Hz tones and terminates with `noTone(BUZZER_PIN); digitalWrite(BUZZER_PIN, LOW);`.
-  - Update `loop()`: When `ivLevel < 10 && !beepBelow10`, halt timer, emit `EVENT:CRITICAL_EMPTY`, `BUZZER:EVENT:10:5SEC`, `EVENT:INFUSION_COMPLETED`, and `STATUS:COMPLETED`, display `"CRITICAL <10%!  "` on LCD, and sound `beepAlarm5Seconds()`.
-  - Guard `CMD:COMPLETE` so it only fires if `!sessionCompletedEmitted`.
-  - Use padded `snprintf` 16-character buffers for all LCD rows.
-- **[MODIFY] `sketch_jan13a/sketch_jan13a.ino`**: Mirror identical firmware code.
+### A. Dedicated `updateDoctorReportData()` Function
+Create a unified, robust data binding function `updateDoctorReportData()` in both `frontend/app.js` and `app.js` that:
+- Reads live inputs: Patient Name, MRN/ID, Age, Bed/Room, Attending Staff, Solution Type, Prescribed Volume, Vitals (HR, RR, Systolic BP, Diastolic BP), and Clinical Notes.
+- Calculates precise session metrics:
+  - **Start Time**: `state.sessionStart` (or formatted start timestamp).
+  - **End Time**: `state.sessionEnd` (or current `new Date()`).
+  - **Elapsed Duration**: `state.elapsed` (or computed difference `sessionEnd - sessionStart`).
+  - **Injected & Residual Volumetrics**: `injectedVol = (pVol * (injectedPct / 100)).toFixed(1)`, `residualVol = (pVol - injectedVol).toFixed(1)`.
+  - **Average Flow Rate**: `avgFlowRate = (injectedVol / durationHours).toFixed(1)`.
+  - **Outcome Banner**: `RESERVOIR DEPLETED (< 10%) — HALTED SAFELY FOR BAG REPLACEMENT` if `level < 10%`, `TRIP COMPLETED` if `>= 95%`, or `PARTIAL DELIVERY`.
+- Populates all DOM elements (`rep-id`, `rep-timestamp`, `rep-patient-name`, `rep-patient-id`, `rep-patient-age`, `rep-patient-bed`, `rep-patient-attender`, `rep-admission-time`, `rep-vitals-hr`, `rep-vitals-rr`, `rep-vitals-bp`, `rep-vitals-hemo`, `rep-solution-type`, `rep-target-volume`, `rep-ai-prescribed-flow`, `rep-weight-envelope`, `rep-clinical-notes`, `rep-saline-injected`, `rep-saline-mass`, `rep-saline-residual`, `rep-time-started`, `rep-time-ended`, `rep-time-duration`, `rep-time-duration-text`, `rep-actual-flow-rate`, `rep-completion-pct`, `rep-trip-outcome`).
+- Re-syncs all 7 D3 milestone audit table rows (`#rep-btime-XX` and `#rep-bstat-XX`) from `state.buzzerMilestones`.
 
-### Component 2: Frontend Telemetry & Report Logic (`frontend/app.js` & `app.js`)
+### B. Binding `updateDoctorReportData()` to All View & Download Triggers
+1. **`openDoctorReportModal()`**:
+   - Executes `updateDoctorReportData()`.
+   - Calls `acknowledgeAlarm()` (mutes sound and hides `#alarm-overlay`).
+   - Removes `.hidden` from `#report-modal` (`z-index: 3000 !important`).
+2. **`downloadDoctorReportText()`**:
+   - Executes `updateDoctorReportData()`.
+   - Builds complete, structured text file payload with reference ID, demographics, vitals, volumetric metrics, notes, and verification stamps.
+   - Triggers browser Blob `.txt` download automatically (`Doctor_Report_[Name]_[ID]_[Time].txt`).
+3. **`printDoctorReport()`**:
+   - Executes `updateDoctorReportData()`.
+   - Sets `document.title` to `Clinical_Infusion_Report_[Name]_[ID]`.
+   - Calls `window.print()` for clean A4 PDF generation.
+4. **Warning Popup Action Buttons** (`#alarm-overlay`):
+   - "View Doctor's Report" -> `openDoctorReportModal()`
+   - "Download (.txt)" -> `downloadDoctorReportText(); acknowledgeAlarm();`
+   - "Mute Alarm" -> `acknowledgeAlarm()`
+
+---
+
+## 3. Detailed Proposed Changes
+
+### Component 1: `frontend/app.js` & `app.js`
 - **[MODIFY] `frontend/app.js`**:
-  - Update `LEVEL` telemetry handler: when `state.level < 10 && state.status === 'INFUSING'`, stop local timer, trigger alarm overlay, sound 5s Web Audio alert, and execute `completeInfusionSession(false)`.
-  - Update `EVENT:CRITICAL_EMPTY` and `BUZZER:EVENT:10:5SEC` handlers to halt timer, trigger alarm UI, and prepare Doctor's Report.
-  - Update `onSimulateWeightSlider(val)`: when tested below 10%, trigger timer stop, 5s alert, warning popup, and report compilation.
-  - Implement and export `downloadDoctorReportText()` to global `window`.
-  - Fix duration and timestamp handling in `completeInfusionSession()`.
-- **[MODIFY] `app.js`**: Mirror identical logic and functions to maintain dual-root deployment integrity.
+  - Implement `updateDoctorReportData()`.
+  - Refactor `completeInfusionSession(fromUser = true)` to use `updateDoctorReportData()`.
+  - Refactor `openDoctorReportModal()`, `downloadDoctorReportText()`, and `printDoctorReport()` to always run `updateDoctorReportData()` first.
+  - Export `updateDoctorReportData` and `downloadDoctorReportText` to `window`.
+- **[MODIFY] `app.js`**:
+  - Apply exact identical changes to maintain dual-root deployment synchronization.
 
-### Component 3: Workstation Layout & Styling (`style.css` & `frontend/style.css`)
-- **[MODIFY] `frontend/style.css` & `style.css`**:
-  - Style `.alarm-actions` with clean responsive button row.
-  - Style `.btn-alarm-view-report` with medical cyan glow, clear icon, and prominent primary action styling.
+### Component 2: Markup Updates (`frontend/index.html` & `index.html`)
+- **[MODIFY] `frontend/index.html` & `index.html`**:
+  - Verify action buttons on `#alarm-overlay` and `#report-modal` invoke the updated functions cleanly.
 
 ---
 
-## 3. Verification Plan
+## 4. Verification Plan
 
-### Automated & Synthesized Tests
-1. **Web Audio & 5-Second Sound**: Verify `playBuzzerBeeps(12, 2800, 250, 160)` plays for exactly ~5 seconds without hanging.
-2. **Text Report Download**: Verify clicking `downloadDoctorReportText()` triggers browser download of `.txt` clinical audit file with patient name and MRN in filename.
-3. **Print Report (PDF)**: Verify `printDoctorReport()` triggers the browser print dialog formatted for clean A4 hospital letterhead.
-
-### Manual Verification in Browser (Port 5500)
-1. Open active browser session at `http://localhost:5500/`.
-2. Start an infusion session (click "Start Infusion").
-3. Slide weight slider to below 10% (e.g., 50g / 5%).
-4. Verify:
-   - Chronometer timer stops immediately.
-   - 5-second acoustic alert sounds.
-   - Critical Warning Popup `#alarm-overlay` appears on screen.
-   - Doctor's Report Modal `#report-modal` opens with complete session metrics.
-   - "Download Report" button downloads `.txt` file.
-   - "Print Doctor Report" opens PDF print dialog.
+### Automated & Manual Verification Steps
+1. **Browser Testing (Port 5500)**:
+   - Navigate to `http://localhost:5500/`.
+   - Fill in patient details: Name = `Alexander Wright`, MRN = `MED-8841`, Bed = `Bed 04-A`, HR = `82`, SBP = `125`, DBP = `82`.
+   - Click "Start Infusion" and let timer run for ~5 seconds.
+   - Simulate weight slider dropping below 10% (e.g., set to `50g` / `5%`).
+   - Confirm `#alarm-overlay` appears and timer halts immediately.
+   - Click **"View Doctor's Report"**: Confirm modal opens ON TOP, showing elapsed time `00:00:05`, correct patient name `Alexander Wright`, MRN `MED-8841`, Bed `Bed 04-A`, injected saline volume, and outcome `RESERVOIR DEPLETED (< 10%) — HALTED SAFELY`.
+   - Click **"Download Report"** inside modal: Confirm text file downloads with exact matching live data.
+   - Click **"Print Doctor Report (A4 / PDF)"**: Confirm print dialog opens with populated sheet.
