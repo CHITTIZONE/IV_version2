@@ -328,7 +328,7 @@ function onSimulateWeightSlider(val) {
   computeRemainingVolume();
   checkBuzzerMilestones(level);
 
-  // Critical milestone (< 10%): Stop timer, sound 5s buzzer, place warning popup, and generate complete report
+  // Critical milestone (< 10%): Stop timer, sound 10s buzzer, place warning popup, and generate complete report
   if (level < 10) {
     if (state.status === 'INFUSING') {
       stopLocalTimer();
@@ -336,7 +336,7 @@ function onSimulateWeightSlider(val) {
       if (!state.tripCompleted) {
         completeInfusionSession(false);
       }
-      playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps (12 x 410ms ≈ 5s)
+      playBuzzerBeeps(25, 2800, 250, 150); // 10 seconds of emergency acoustic alert beeps (25 x 400ms = 10s)
     } else if (!state.alarmActive) {
       triggerAlarmUI('empty');
     }
@@ -462,14 +462,14 @@ function parseTelemetryLine(line) {
       computeRemainingVolume();
       checkBuzzerMilestones(state.level);
 
-      // Critical threshold (< 10%): Stop timer, sound 5s alarm, place warning popup, generate complete report
+      // Critical threshold (< 10%): Stop timer, sound 10s alarm, place warning popup, generate complete report
       if (state.level < 10 && state.status === 'INFUSING') {
         stopLocalTimer();
         triggerAlarmUI('empty');
         if (!state.tripCompleted) {
           completeInfusionSession(false);
         }
-        playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps
+        playBuzzerBeeps(25, 2800, 250, 150); // 10 seconds of emergency acoustic alert beeps
       } else if (state.level >= 10 && state.alarmActive) {
         resolveAlarm();
       }
@@ -578,14 +578,14 @@ function parseTelemetryLine(line) {
   }
 
   // CRITICAL RESERVOIR DEPLETION (< 10%)
-  if (line.startsWith('EVENT:CRITICAL_EMPTY') || line.startsWith('BUZZER:EVENT:10:5SEC')) {
+  if (line.startsWith('EVENT:CRITICAL_EMPTY') || line.startsWith('BUZZER:EVENT:10')) {
     stopLocalTimer();
     triggerAlarmUI('empty');
     if (!state.tripCompleted) {
       completeInfusionSession(false);
     }
-    playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps
-    logEvent('🚨 CRITICAL EMPTY ALARM: Fluid dropped below 10%. Timer stopped, 5s buzzer sounded, and Doctor Report prepared.', 'error');
+    playBuzzerBeeps(25, 2800, 250, 150); // 10 seconds of emergency acoustic alert beeps
+    logEvent('🚨 CRITICAL EMPTY ALARM: Fluid dropped below 10%. Timer stopped, 10s buzzer sounded, and Doctor Report prepared.', 'error');
     return;
   }
 
@@ -1588,11 +1588,16 @@ async function completeInfusionSession(fromUser = true) {
 }
 
 function openDoctorReportModal() {
+  acknowledgeAlarm(); // Mute alarm and dismiss warning overlay so report modal is visible
+  if (!state.tripCompleted) {
+    completeInfusionSession(false);
+  }
   const modal = document.getElementById('report-modal');
   if (modal) modal.classList.remove('hidden');
 }
 
 function closeDoctorReportModal() {
+  acknowledgeAlarm(); // Dismiss overlay & mute alarm to go back cleanly
   const modal = document.getElementById('report-modal');
   if (modal) modal.classList.add('hidden');
 }
@@ -1634,6 +1639,9 @@ function copyReportSummary() {
 }
 
 function downloadDoctorReportText() {
+  if (!state.tripCompleted) {
+    completeInfusionSession(false);
+  }
   const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
   const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'MED-8841';
   const repRef = document.getElementById('rep-id')?.textContent || `IVR-${pId}`;

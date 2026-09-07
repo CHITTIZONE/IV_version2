@@ -83,10 +83,10 @@ void beepBuzzer(int count) {
   beepBuzzer(count, 2400, 120, 90);
 }
 
-// Sound emergency acoustic alarm on Pin D3 for exactly 5 seconds, then silence completely
-void beepAlarm5Seconds() {
+// Sound emergency acoustic alarm on Pin D3 for exactly 10 seconds, then silence completely
+void beepAlarm10Seconds() {
   unsigned long startAlarm = millis();
-  while (millis() - startAlarm < 5000) {
+  while (millis() - startAlarm < 10000) {
     tone(BUZZER_PIN, 2800);
     delay(250);
     noTone(BUZZER_PIN);
@@ -412,7 +412,7 @@ void loop() {
       digitalWrite(BUZZER_PIN, LOW);
 
       Serial.println(F("EVENT:CRITICAL_EMPTY"));
-      Serial.println(F("BUZZER:EVENT:10:5SEC"));
+      Serial.println(F("BUZZER:EVENT:10:10SEC"));
       Serial.println(F("EVENT:INFUSION_COMPLETED"));
       Serial.println(F("STATUS:COMPLETED"));
 
@@ -420,7 +420,7 @@ void loop() {
       lcd.setCursor(0, 0); lcd.print(F("CRITICAL <10%!  "));
       lcd.setCursor(0, 1); lcd.print(F("TIMER STOPPED   "));
 
-      beepAlarm5Seconds();
+      beepAlarm10Seconds();
 
       noTone(BUZZER_PIN);
       digitalWrite(BUZZER_PIN, LOW);

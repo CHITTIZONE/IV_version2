@@ -1072,7 +1072,7 @@ textarea {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 3000 !important;
   background: var(--bg-modal-overlay);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
