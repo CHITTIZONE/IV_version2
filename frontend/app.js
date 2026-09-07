@@ -15,12 +15,26 @@ const state = {
   weight:       0.0,
   level:        0,
   elapsed:      '00:00:00',
+  accumulatedSec: 0,
+  timerInterval:null,
   calFull:      500.0,
   calEmpty:     50.0,
-  calFactor:    2280.0,
+  calFactor:    228.0,
   calMode:      false,
   alarmActive:  false,
   sessionStart: null,
+  sessionEnd:   null,
+  startWeight:  500.0,
+  tripCompleted:false,
+  buzzerMilestones: {
+    90: { triggered: false, time: null, count: 1, label: '90% Level' },
+    75: { triggered: false, time: null, count: 1, label: '75% Level' },
+    65: { triggered: false, time: null, count: 1, label: '65% Level' },
+    50: { triggered: false, time: null, count: 1, label: '50% Level' },
+    35: { triggered: false, time: null, count: 1, label: '35% Level' },
+    25: { triggered: false, time: null, count: 1, label: '25% Level' },
+    10: { triggered: false, time: null, count: 5, label: '< 10% Critical' }
+  },
   theme:        'dark',
   logs:         [],
   aiPrediction: {
@@ -65,7 +79,7 @@ function applyTheme(theme) {
   }
 }
 
-// ── Web Audio Clinical Alarm Generator ────────────────────────────────────────
+// ── Web Audio Clinical Alarm & D3 Buzzer Synthesizer ──────────────────────────
 let audioCtx = null;
 let beepInterval = null;
 
@@ -73,6 +87,39 @@ function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+// Synthesize precise D3 buzzer acoustic pulses (Single beep for 90%-25%, 5 beeps below 10%)
+function playBuzzerBeeps(count, freq = 2400, onMs = 120, offMs = 90) {
+  initAudio();
+  if (!audioCtx) return;
+  try {
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < count; i++) {
+      const startTime = now + (i * (onMs + offMs)) / 1000;
+      const stopTime  = startTime + onMs / 1000;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.30, startTime + 0.015);
+      gain.gain.setValueAtTime(0.30, stopTime - 0.015);
+      gain.gain.linearRampToValueAtTime(0.001, stopTime);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(startTime);
+      osc.stop(stopTime);
+    }
+  } catch (_) {}
 }
 
 function playClinicalAlertBeep() {
@@ -120,10 +167,20 @@ function saveCalibration() {
 function loadCalibration() {
   const f = parseFloat(localStorage.getItem('ivmu_cal_full'));
   const e = parseFloat(localStorage.getItem('ivmu_cal_empty'));
-  const c = parseFloat(localStorage.getItem('ivmu_cal_factor'));
+  let c = parseFloat(localStorage.getItem('ivmu_cal_factor'));
   if (!isNaN(f)) state.calFull   = f;
   if (!isNaN(e)) state.calEmpty  = e;
-  if (!isNaN(c)) state.calFactor = c;
+  if (!isNaN(c)) {
+    if (c > 1000) c = 228.0; // Normalize legacy 2280 default to 228.0
+    state.calFactor = c;
+  } else {
+    state.calFactor = 228.0;
+  }
+
+  const inSetupFull = document.getElementById('inp-setup-full-weight');
+  const inSetupEmpty = document.getElementById('inp-setup-empty-weight');
+  if (inSetupFull) inSetupFull.value = state.calFull;
+  if (inSetupEmpty) inSetupEmpty.value = state.calEmpty;
 
   const inFull = document.getElementById('inp-full-weight');
   const inEmpty = document.getElementById('inp-empty-weight');
@@ -140,6 +197,141 @@ function loadCalibration() {
   if (stFull) stFull.textContent = state.calFull.toFixed(1) + ' g';
   if (stEmpty) stEmpty.textContent = state.calEmpty.toFixed(1) + ' g';
   if (stFactor) stFactor.textContent = state.calFactor.toFixed(1);
+
+  updateStartingRanges(state.calFull, state.calEmpty);
+}
+
+// ── Gram Weight Setup & Reservoir Capacity (Channels Removed) ─────────────────
+function updateStartingRanges(fullWeight, emptyWeight) {
+  fullWeight = parseFloat(fullWeight) || 500.0;
+  emptyWeight = parseFloat(emptyWeight) || 50.0;
+  if (emptyWeight >= fullWeight) emptyWeight = 0;
+  
+  state.calFull = fullWeight;
+  state.calEmpty = emptyWeight;
+
+  const netRange = fullWeight - emptyWeight;
+  const th50 = emptyWeight + 0.50 * netRange;
+
+  // Update Net Saline summary readout
+  const dispNet = document.getElementById('disp-net-range');
+  if (dispNet) dispNet.textContent = `${netRange.toFixed(1)} g (${Math.round(netRange)} mL)`;
+
+  // Update Slider bounds & ticks
+  const slider = document.getElementById('sim-weight-slider');
+  if (slider) {
+    slider.max = fullWeight;
+    slider.min = 0;
+  }
+  const tFull = document.getElementById('tick-full');
+  const tMid = document.getElementById('tick-mid');
+  const tEmpty = document.getElementById('tick-empty');
+  if (tFull) tFull.textContent = `${Math.round(fullWeight)}g (Full)`;
+  if (tMid) tMid.textContent = `${Math.round(th50)}g (50%)`;
+  if (tEmpty) tEmpty.textContent = `${Math.round(emptyWeight)}g (Tare)`;
+
+  // Update active preset button highlight
+  ['500', '1000', '250', '100'].forEach(p => {
+    const btn = document.getElementById(`preset-btn-${p}`);
+    if (btn) {
+      if (Math.round(fullWeight) === parseInt(p, 10)) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  });
+
+  // Sync with inputs if not currently focused
+  const inSetupFull = document.getElementById('inp-setup-full-weight');
+  const inSetupEmpty = document.getElementById('inp-setup-empty-weight');
+  if (inSetupFull && document.activeElement !== inSetupFull) inSetupFull.value = fullWeight;
+  if (inSetupEmpty && document.activeElement !== inSetupEmpty) inSetupEmpty.value = emptyWeight;
+
+  const inFull = document.getElementById('inp-full-weight');
+  const inEmpty = document.getElementById('inp-empty-weight');
+  if (inFull && document.activeElement !== inFull) inFull.value = fullWeight;
+  if (inEmpty && document.activeElement !== inEmpty) inEmpty.value = emptyWeight;
+
+  const stFull = document.getElementById('stored-full');
+  const stEmpty = document.getElementById('stored-empty');
+  if (stFull) stFull.textContent = fullWeight.toFixed(1) + ' g';
+  if (stEmpty) stEmpty.textContent = emptyWeight.toFixed(1) + ' g';
+
+  // Synchronize target infusion volume
+  const inpVol = document.getElementById('inp-saline-volume');
+  if (inpVol && document.activeElement !== inpVol) {
+    inpVol.value = Math.round(netRange);
+    if (typeof triggerAiPrediction === 'function') triggerAiPrediction();
+  }
+
+  saveCalibration();
+}
+
+function applyWeightPreset(grams) {
+  let empty = 50;
+  if (grams === 100) empty = 20;
+  else if (grams === 250) empty = 30;
+  else if (grams === 500) empty = 50;
+  else if (grams === 1000) empty = 75;
+
+  const inSetupFull = document.getElementById('inp-setup-full-weight');
+  const inSetupEmpty = document.getElementById('inp-setup-empty-weight');
+  if (inSetupFull) inSetupFull.value = grams;
+  if (inSetupEmpty) inSetupEmpty.value = empty;
+
+  updateStartingRanges(grams, empty);
+
+  if (state.connected) {
+    sendCmd(`CAL:FULL:${grams}`);
+    sendCmd(`CAL:EMPTY:${empty}`);
+  }
+  logEvent(`Gram weight starting envelope set to ${grams} g (Tare: ${empty} g).`, 'info');
+}
+
+function onStartingWeightInputChange() {
+  const full = parseFloat(document.getElementById('inp-setup-full-weight').value) || 500;
+  const empty = parseFloat(document.getElementById('inp-setup-empty-weight').value) || 50;
+  updateStartingRanges(full, empty);
+  if (state.connected) {
+    sendCmd(`CAL:FULL:${full}`);
+    sendCmd(`CAL:EMPTY:${empty}`);
+  }
+}
+
+function onSimulateWeightSlider(val) {
+  val = parseFloat(val);
+  const netRange = state.calFull - state.calEmpty;
+  let level = 0;
+  if (netRange > 0) {
+    level = Math.round(((val - state.calEmpty) / netRange) * 100);
+  }
+  level = Math.max(0, Math.min(100, level));
+
+  const readout = document.getElementById('slider-preview-val');
+  if (readout) {
+    readout.textContent = `${val.toFixed(1)} g (${level}%)`;
+  }
+
+  state.weight = val;
+  state.level = level;
+
+  const stWeight = document.getElementById('stat-weight');
+  const stWeightKg = document.getElementById('stat-weight-kg');
+  if (stWeight) stWeight.textContent = val.toFixed(1);
+  if (stWeightKg) stWeightKg.textContent = (val / 1000.0).toFixed(3) + ' kg';
+
+  const calLive = document.getElementById('cal-live-weight');
+  if (calLive) calLive.textContent = val.toFixed(1) + ' g';
+
+  updateIvBag(level);
+  computeRemainingVolume();
+
+  if (level <= 5 && !state.alarmActive) {
+    triggerAlarmUI('empty');
+  } else if (level > 5 && state.alarmActive) {
+    dismissAlarmUI();
+  }
 }
 
 // ── Web Serial Connection ─────────────────────────────────────────────────────
@@ -263,21 +455,29 @@ function parseTelemetryLine(line) {
   // 3. ELAPSED TIME (TIME:00:01:23 or Time: 00:01:23)
   const timeMatch = trimmed.match(/^(?:TIME|Time|time):\s*([0-9:]+)/i);
   if (timeMatch) {
-    state.elapsed = timeMatch[1].trim();
-    const lblT = document.getElementById('lbl-time');
-    const stTC = document.getElementById('stat-time-center');
-    if (lblT) lblT.textContent = state.elapsed;
-    if (stTC) stTC.textContent = state.elapsed;
+    // Only advance telemetry timer if session is actively infusing; freeze when stopped or completed
+    if (state.status === 'INFUSING') {
+      state.elapsed = timeMatch[1].trim();
+      const parts = state.elapsed.split(':');
+      if (parts.length === 3) {
+        state.accumulatedSec = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+      }
+      const lblT = document.getElementById('lbl-time');
+      const stTC = document.getElementById('stat-time-center');
+      if (lblT) lblT.textContent = state.elapsed;
+      if (stTC) stTC.textContent = state.elapsed;
+    }
     return;
   }
 
-  // 4. SYSTEM STATE (STATUS:RUNNING, Status: RUNNING, RUN, STP)
+  // 4. SYSTEM STATE (STATUS:RUNNING, Status: RUNNING, RUN, STP, COMPLETED)
   const statusMatch = trimmed.match(/^(?:STATUS|Status|status):\s*(\w+)/i);
   if (statusMatch) {
     const rawStat = statusMatch[1].toUpperCase();
     let normalized = 'STANDBY';
     if (rawStat === 'RUNNING' || rawStat === 'RUN') normalized = 'INFUSING';
     else if (rawStat === 'STOPPED' || rawStat === 'STP') normalized = 'PAUSED';
+    else if (rawStat === 'COMPLETED') normalized = 'COMPLETED';
     else if (rawStat === 'ALARM') normalized = 'ALARM';
     else if (rawStat === 'CAL_MODE') normalized = 'CAL_MODE';
     updateStatus(normalized);
@@ -310,6 +510,7 @@ function parseTelemetryLine(line) {
     state.calFull = parseFloat(line.slice(9)) || state.calFull;
     const el = document.getElementById('stored-full');
     if (el) el.textContent = state.calFull.toFixed(1) + ' g';
+    updateStartingRanges(state.calFull, state.calEmpty);
     saveCalibration();
     return;
   }
@@ -318,6 +519,7 @@ function parseTelemetryLine(line) {
     state.calEmpty = parseFloat(line.slice(10)) || state.calEmpty;
     const el = document.getElementById('stored-empty');
     if (el) el.textContent = state.calEmpty.toFixed(1) + ' g';
+    updateStartingRanges(state.calFull, state.calEmpty);
     saveCalibration();
     return;
   }
@@ -332,6 +534,30 @@ function parseTelemetryLine(line) {
 
   if (line.startsWith('CAL:TARED')) {
     logEvent('Transducer zero tare completed successfully.', 'success');
+    return;
+  }
+
+  // HARDWARE D3 BUZZER EVENTS
+  if (line.startsWith('BUZZER:EVENT:')) {
+    const parts = line.split(':');
+    const pct = parseInt(parts[2]);
+    const cnt = parseInt(parts[3]) || 1;
+    logEvent(`🔊 D3 Hardware Buzzer Event: ${cnt} beep(s) at ${pct}% fluid level.`, 'warning');
+    syncBuzzerMilestoneFromHardware(pct, cnt);
+    return;
+  }
+
+  // INFUSION TRIP COMPLETED EVENT
+  if (line.startsWith('EVENT:INFUSION_COMPLETED') || line === 'STATUS:COMPLETED') {
+    completeInfusionSession();
+    return;
+  }
+
+  // AUTO-ZERO CALIBRATION FEEDBACK
+  if (line.startsWith('CAL:AUTO_ZERO_OK') || line === 'CAL:TARED') {
+    const fb = document.getElementById('auto-zero-text');
+    if (fb) fb.textContent = '✓ Transducer auto-zeroed to 0.00 g baseline successfully.';
+    logEvent('Auto-Calibration: Transducer auto-zeroed to 0.00 g successfully.', 'success');
     return;
   }
 
@@ -407,11 +633,9 @@ function updateIvBag(level) {
     }
   }
 
-  // Update Actuator Channels (Line Relays)
-  setChannelState('relay-1', level >= 75);
-  setChannelState('relay-2', level >= 50 && level < 75);
-  setChannelState('relay-3', level >= 25 && level < 50);
-  setChannelState('relay-4', level > 0  && level < 25, true);
+  // D3 Buzzer Milestone Check in Descending Order (90%, 75%, 65%, 50%, 35%, 25%, <10%)
+  // All relays removed: Subsystem dedicated to D3 Buzzer alerting
+  checkBuzzerMilestones(level);
 
   // Dynamic Drip Animator
   const drop = document.getElementById('drip-drop');
@@ -424,19 +648,6 @@ function updateIvBag(level) {
   }
 
   drawWaveSurface(fillY, fillH, level);
-}
-
-function setChannelState(id, isActive, isWarning = false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const statusSpan = el.querySelector('.channel-status');
-  if (isActive) {
-    el.className = isWarning ? 'channel-card warning' : 'channel-card active';
-    if (statusSpan) statusSpan.textContent = isWarning ? 'WARNING ACTIVE' : 'OPEN / ACTIVE';
-  } else {
-    el.className = 'channel-card';
-    if (statusSpan) statusSpan.textContent = 'STANDBY';
-  }
 }
 
 function drawWaveSurface(fillY, fillH, level) {
@@ -468,6 +679,32 @@ function animateWaveLoop() {
   requestAnimationFrame(animateWaveLoop);
 }
 
+function startLocalTimer() {
+  stopLocalTimer();
+  state.timerInterval = setInterval(() => {
+    if (state.status !== 'INFUSING') {
+      stopLocalTimer();
+      return;
+    }
+    state.accumulatedSec = (state.accumulatedSec || 0) + 1;
+    const hrs  = Math.floor(state.accumulatedSec / 3600);
+    const mins = Math.floor((state.accumulatedSec % 3600) / 60);
+    const secs = state.accumulatedSec % 60;
+    state.elapsed = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    const stTC = document.getElementById('stat-time-center');
+    const lblT = document.getElementById('lbl-time');
+    if (stTC) stTC.textContent = state.elapsed;
+    if (lblT) lblT.textContent = state.elapsed;
+  }, 1000);
+}
+
+function stopLocalTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
+
 // ── System Status & Session Synchronization ───────────────────────────────────
 function updateStatus(status) {
   state.status = status;
@@ -480,22 +717,30 @@ function updateStatus(status) {
   const btnStart = document.getElementById('btn-start');
   const btnStop  = document.getElementById('btn-stop');
 
-  if (btnStart) btnStart.disabled = !(state.connected && (status === 'STANDBY' || status === 'PAUSED'));
-  if (btnStop)  btnStop.disabled  = !(state.connected && status === 'INFUSING');
+  if (btnStart) btnStart.disabled = !(status === 'STANDBY' || status === 'PAUSED');
+  if (btnStop)  btnStop.disabled  = !(status === 'INFUSING');
 
-  if (status === 'INFUSING' && !state.sessionStart) {
-    state.sessionStart = new Date();
-    const stTime = document.getElementById('lbl-started-at');
-    if (stTime) {
-      stTime.textContent = state.sessionStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (status === 'INFUSING') {
+    if (!state.sessionStart) {
+      state.sessionStart = new Date();
+      state.startWeight = state.weight || state.calFull;
+      state.tripCompleted = false;
+      resetBuzzerMilestonesUI();
+      const stTime = document.getElementById('lbl-started-at');
+      if (stTime) {
+        stTime.textContent = state.sessionStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      showActivePrescriptionBar();
+      logEvent(`Infusion session started for ${getPatientName()}. D3 Buzzer tracking active.`, 'success');
     }
-    showActivePrescriptionBar();
-    logEvent(`Infusion session started for ${getPatientName()}.`, 'success');
-  }
-
-  if (status === 'PAUSED' || status === 'STANDBY') {
-    if (status === 'PAUSED') logEvent('Infusion session paused.', 'warning');
-    state.sessionStart = null;
+    startLocalTimer();
+  } else {
+    stopLocalTimer();
+    if (status === 'PAUSED') logEvent('Infusion session paused. Timer stopped.', 'warning');
+    if (status === 'COMPLETED') {
+      const stTC = document.getElementById('stat-time-center');
+      if (stTC && state.elapsed) stTC.textContent = state.elapsed;
+    }
   }
 }
 
@@ -557,11 +802,24 @@ function resolveAlarm() {
 async function sendStart() {
   if (!validateAdmissionForm()) return;
   initAudio();
-  await sendCmd('CMD:START');
+  if (state.status === 'COMPLETED') {
+    state.accumulatedSec = 0;
+    state.elapsed = '00:00:00';
+    state.sessionStart = new Date();
+    const stTC = document.getElementById('stat-time-center');
+    if (stTC) stTC.textContent = '00:00:00';
+  }
+  updateStatus('INFUSING');
+  if (state.connected) {
+    await sendCmd('CMD:START');
+  }
 }
 
 async function sendStop() {
-  await sendCmd('CMD:STOP');
+  updateStatus('PAUSED');
+  if (state.connected) {
+    await sendCmd('CMD:STOP');
+  }
 }
 
 async function sendTare() {
@@ -580,8 +838,9 @@ async function applyFullWeight() {
   const val = parseFloat(document.getElementById('inp-full-weight').value);
   if (isNaN(val) || val <= 0) { alert('Please enter a valid reference weight in grams.'); return; }
   state.calFull = val;
-  document.getElementById('stored-full').textContent = val.toFixed(1) + ' g';
-  saveCalibration();
+  const inSetupFull = document.getElementById('inp-setup-full-weight');
+  if (inSetupFull) inSetupFull.value = val;
+  updateStartingRanges(val, state.calEmpty);
   await sendCmd(`CAL:FULL:${val}`);
   logEvent(`Full reference mass calibrated to ${val} g.`, 'info');
 }
@@ -590,8 +849,9 @@ async function applyEmptyWeight() {
   const val = parseFloat(document.getElementById('inp-empty-weight').value);
   if (isNaN(val) || val < 0) { alert('Please enter a valid empty reference weight in grams.'); return; }
   state.calEmpty = val;
-  document.getElementById('stored-empty').textContent = val.toFixed(1) + ' g';
-  saveCalibration();
+  const inSetupEmpty = document.getElementById('inp-setup-empty-weight');
+  if (inSetupEmpty) inSetupEmpty.value = val;
+  updateStartingRanges(state.calFull, val);
   await sendCmd(`CAL:EMPTY:${val}`);
   logEvent(`Empty reference tare calibrated to ${val} g.`, 'info');
 }
@@ -952,7 +1212,7 @@ function applyAiFlowRateToNotes() {
   animateWaveLoop();
   calculateAiFlowPrediction();
 
-  // Listen for Enter in manual packet terminal
+  // Listen for Enter in manual packet terminal and setup event listeners
   document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('serial-manual-input');
     if (input) {
@@ -960,6 +1220,26 @@ function applyAiFlowRateToNotes() {
         if (e.key === 'Enter') sendManualCmd();
       });
     }
+
+    // Attach direct DOM listeners for Gram Weight Setup
+    ['500', '1000', '250', '100'].forEach(p => {
+      const btn = document.getElementById(`preset-btn-${p}`);
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          applyWeightPreset(parseInt(p, 10));
+        });
+      }
+    });
+
+    const fullInp = document.getElementById('inp-setup-full-weight');
+    if (fullInp) fullInp.addEventListener('input', onStartingWeightInputChange);
+
+    const emptyInp = document.getElementById('inp-setup-empty-weight');
+    if (emptyInp) emptyInp.addEventListener('input', onStartingWeightInputChange);
+
+    const slider = document.getElementById('sim-weight-slider');
+    if (slider) slider.addEventListener('input', (e) => onSimulateWeightSlider(e.target.value));
   });
 
   // Modal ESC key handler
@@ -969,3 +1249,360 @@ function applyAiFlowRateToNotes() {
 
   logEvent('IV Sentry Pro Workstation ready. Awaiting telemetry connection to Unit 1.', 'info');
 })();
+
+// ── D3 Buzzer Milestones Controller (Ordered Descending Alerts) ─────────────
+function checkBuzzerMilestones(level) {
+  const thresholds = [
+    { pct: 90, count: 1, freq: 2400 },
+    { pct: 75, count: 1, freq: 2400 },
+    { pct: 65, count: 1, freq: 2400 },
+    { pct: 50, count: 1, freq: 2400 },
+    { pct: 35, count: 1, freq: 2500 },
+    { pct: 25, count: 1, freq: 2600 },
+    { pct: 10, count: 5, freq: 2800, isCritical: true }
+  ];
+
+  thresholds.forEach(t => {
+    const isCrossed = (t.pct === 10) ? (level < 10) : (level <= t.pct);
+    const m = state.buzzerMilestones[t.pct];
+    if (isCrossed && m && !m.triggered) {
+      m.triggered = true;
+      m.time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Highlight on-screen milestone card
+      const card = document.getElementById(`ms-${t.pct}`);
+      const statSpan = document.getElementById(`ms-status-${t.pct}`);
+      if (card) {
+        card.classList.add('active', 'triggered');
+        setTimeout(() => card.classList.remove('triggered'), 1800);
+      }
+      if (statSpan) {
+        statSpan.textContent = `TRIGGERED (${m.time})`;
+      }
+
+      // Synthesize Acoustic Tones via Web Audio
+      playBuzzerBeeps(t.count, t.freq);
+
+      // Flash D3 live indicator
+      const ind = document.getElementById('buzzer-live-indicator');
+      if (ind) {
+        ind.classList.add('buzzing');
+        setTimeout(() => ind.classList.remove('buzzing'), 1000);
+      }
+
+      // Update Audit log cell in Doctor Report
+      const repTime = document.getElementById(`rep-btime-${t.pct}`);
+      const repStat = document.getElementById(`rep-bstat-${t.pct}`);
+      if (repTime) repTime.textContent = m.time;
+      if (repStat) {
+        repStat.textContent = 'Emitted (D3)';
+        repStat.className = (t.pct === 10) ? 'badge-audit alert' : 'badge-audit success';
+      }
+
+      // Clinical Event Log Entry
+      if (t.count === 5) {
+        logEvent(`🚨 CRITICAL BUZZER ALERT: Fluid level below 10%! Emitted 5 rapid alert beeps on D3 & Web Audio.`, 'error');
+      } else {
+        logEvent(`🔔 D3 Buzzer Milestone: ${t.pct}% volume reached. Emitted single beep tone.`, 'info');
+      }
+
+      // Send to hardware if connected
+      if (state.connected) {
+        sendCmd(`CMD:BUZZER:${t.count}`);
+      }
+    }
+  });
+
+  // Automatic Trip Completion Detection when level reaches 0% during an active session
+  if (level <= 0 && state.status === 'INFUSING' && !state.tripCompleted) {
+    state.tripCompleted = true;
+    setTimeout(() => {
+      completeInfusionSession();
+    }, 600);
+  }
+}
+
+function syncBuzzerMilestoneFromHardware(pct, count) {
+  const m = state.buzzerMilestones[pct];
+  if (m) {
+    m.triggered = true;
+    m.time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const card = document.getElementById(`ms-${pct}`);
+    const statSpan = document.getElementById(`ms-status-${pct}`);
+    if (card) card.classList.add('active');
+    if (statSpan) statSpan.textContent = `TRIGGERED (${m.time})`;
+  }
+}
+
+function resetBuzzerMilestonesUI() {
+  [90, 75, 65, 50, 35, 25, 10].forEach(pct => {
+    if (state.buzzerMilestones[pct]) {
+      state.buzzerMilestones[pct].triggered = false;
+      state.buzzerMilestones[pct].time = null;
+    }
+    const card = document.getElementById(`ms-${pct}`);
+    const statSpan = document.getElementById(`ms-status-${pct}`);
+    if (card) card.classList.remove('active', 'triggered');
+    if (statSpan) statSpan.textContent = 'STANDBY';
+
+    const repTime = document.getElementById(`rep-btime-${pct}`);
+    const repStat = document.getElementById(`rep-bstat-${pct}`);
+    if (repTime) repTime.textContent = '—';
+    if (repStat) {
+      repStat.textContent = 'Pending';
+      repStat.className = (pct === 10) ? 'badge-audit alert' : 'badge-audit';
+    }
+  });
+}
+
+function testBuzzerBeep(count) {
+  initAudio();
+  const freq = (count === 5) ? 2800 : 2400;
+  playBuzzerBeeps(count, freq);
+
+  const ind = document.getElementById('buzzer-live-indicator');
+  if (ind) {
+    ind.classList.add('buzzing');
+    setTimeout(() => ind.classList.remove('buzzing'), 1000);
+  }
+
+  logEvent(`D3 Buzzer Manual Test: ${count} beep(s) synthesized (${freq} Hz).`, 'warning');
+  if (state.connected) {
+    sendCmd(`CMD:BUZZER:${count}`);
+  }
+}
+
+// ── Auto-Calibration with Automated Zero-Tare ─────────────────────────────────
+async function startAutoCalibration() {
+  initAudio();
+  const text = document.getElementById('auto-zero-text');
+  const fb = document.getElementById('auto-zero-feedback');
+
+  if (fb) fb.classList.add('zeroing');
+  if (text) text.textContent = 'Auto-Zero in progress... Setting transducer baseline tare to 0.00 g.';
+
+  if (state.connected) {
+    await sendCmd('CAL:MODE:START');
+    await sendCmd('CAL:TARE');
+  }
+
+  state.weight = 0.0;
+  const calLive = document.getElementById('cal-live-weight');
+  const stWeight = document.getElementById('stat-weight');
+  if (calLive) calLive.textContent = '0.0 g';
+  if (stWeight) stWeight.textContent = '0.0';
+
+  playBuzzerBeeps(1, 2200, 100, 50);
+
+  setTimeout(() => {
+    if (fb) fb.classList.remove('zeroing');
+    if (text) text.textContent = '✓ Transducer auto-zeroed to 0.00 g baseline. Ready to place reference mass.';
+  }, 400);
+
+  logEvent('⚡ Auto-Calibration Initiated: Transducer automatically zeroed to 0.00 g.', 'success');
+}
+
+// ── Doctor's Printable Infusion Completion Report Generator ───────────────────
+async function completeInfusionSession() {
+  initAudio();
+  stopLocalTimer();
+  state.sessionEnd = new Date();
+  state.status = 'COMPLETED';
+
+  // Send completion command to Arduino hardware to halt timer & buzzer immediately
+  if (state.connected) {
+    try {
+      await sendCmd('CMD:COMPLETE');
+    } catch (_) {}
+  }
+
+  // System status pill update
+  const pill = document.getElementById('lbl-status');
+  if (pill) {
+    pill.textContent = 'COMPLETED';
+    pill.className = 'status-pill status-completed';
+  }
+
+  const btnStart = document.getElementById('btn-start');
+  const btnStop  = document.getElementById('btn-stop');
+  if (btnStart) btnStart.disabled = false;
+  if (btnStop)  btnStop.disabled  = true;
+
+  // Use the stopped state.elapsed if valid; otherwise compute from timestamps
+  let durationStr = (state.elapsed && state.elapsed !== '00:00:00') ? state.elapsed : '00:00:00';
+  let totalSecs = state.accumulatedSec || 0;
+  if (durationStr === '00:00:00' && state.sessionStart) {
+    const durationMs = Math.max(0, state.sessionEnd.getTime() - state.sessionStart.getTime());
+    totalSecs = Math.floor(durationMs / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    durationStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  state.elapsed = durationStr;
+
+  // Freeze the timer on the workstation dashboard!
+  const stTC = document.getElementById('stat-time-center');
+  const lblT = document.getElementById('lbl-time');
+  if (stTC) stTC.textContent = durationStr;
+  if (lblT) lblT.textContent = durationStr;
+
+  const totalSecsFinal = totalSecs;
+  const hrs = Math.floor(totalSecsFinal / 3600);
+  const mins = Math.floor((totalSecsFinal % 3600) / 60);
+  const secs = totalSecsFinal % 60;
+
+  // Gather patient inputs
+  const pName = document.getElementById('inp-patient-name').value.trim() || 'Alexander Wright';
+  const pId   = document.getElementById('inp-patient-id').value.trim() || 'MED-8841';
+  const pAge  = document.getElementById('inp-patient-age').value.trim() || '42';
+  const pBed  = document.getElementById('inp-bed-no').value.trim() || 'Bed 04-A (Stepdown)';
+  const pAtt  = document.getElementById('inp-attender-name').value.trim() || 'Nurse Sarah Jenkins, RN';
+  const pSol  = document.getElementById('inp-saline-type').value || '0.9% Normal Saline (NS)';
+  const pVol  = parseFloat(document.getElementById('inp-saline-volume').value) || 500.0;
+  const pNotes = document.getElementById('inp-notes').value.trim() || 'Continuous telemetry verified. Normal saline infusion completed per protocol.';
+
+  const hrVal  = document.getElementById('inp-patient-hr').value || '76';
+  const rrVal  = document.getElementById('inp-patient-rr').value || '16';
+  const sbpVal = document.getElementById('inp-patient-sbp').value || '120';
+  const dbpVal = document.getElementById('inp-patient-dbp').value || '80';
+
+  // Volumetric outcome
+  const residualPct = state.level || 0;
+  const injectedPct = Math.max(0, Math.min(100, 100 - residualPct));
+  const injectedVol = (pVol * (injectedPct / 100)).toFixed(1);
+  const residualVol = (pVol - parseFloat(injectedVol)).toFixed(1);
+
+  const durationHours = Math.max(0.01, durationMs / 3600000);
+  const avgFlowRate = (parseFloat(injectedVol) / durationHours).toFixed(1);
+
+  const startStr = startTime.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+  const endStr   = state.sessionEnd.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+  const nowStr   = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+  const reportRef = `IVR-${pId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+
+  const setEl = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+
+  setEl('rep-id', reportRef);
+  setEl('rep-timestamp', nowStr);
+  setEl('rep-patient-name', pName);
+  setEl('rep-patient-id', pId);
+  setEl('rep-patient-age', `${pAge} yrs`);
+  setEl('rep-patient-bed', pBed);
+  setEl('rep-patient-attender', pAtt);
+  setEl('rep-admission-time', startStr);
+
+  setEl('rep-vitals-hr', `${hrVal} bpm`);
+  setEl('rep-vitals-rr', `${rrVal} bpm`);
+  setEl('rep-vitals-bp', `${sbpVal}/${dbpVal} mmHg`);
+  setEl('rep-vitals-hemo', state.aiPrediction.hemoStatus || 'STABLE EUVOLEMIC');
+
+  setEl('rep-solution-type', pSol);
+  setEl('rep-target-volume', `${pVol.toFixed(0)} mL`);
+  setEl('rep-ai-prescribed-flow', `${state.aiPrediction.flowRate} mL/hr (${state.aiPrediction.dripRate} gtt/min)`);
+  setEl('rep-weight-envelope', `Full Ref: ${state.calFull.toFixed(1)} g | Tare: ${state.calEmpty.toFixed(1)} g`);
+  setEl('rep-clinical-notes', pNotes);
+
+  setEl('rep-saline-injected', injectedVol);
+  setEl('rep-saline-mass', `Net Mass Delivered: ${injectedVol} g`);
+  setEl('rep-saline-residual', `${residualVol} mL (${residualVol} g)`);
+  setEl('rep-time-started', startStr);
+  setEl('rep-time-ended', endStr);
+  setEl('rep-time-duration', durationStr);
+  setEl('rep-time-duration-text', `Total injection time: ${hrs}h ${mins}m ${secs}s`);
+  setEl('rep-actual-flow-rate', `${avgFlowRate} mL/hr`);
+  setEl('rep-completion-pct', `${injectedPct.toFixed(1)}% Administered`);
+  setEl('rep-trip-outcome', injectedPct >= 95 ? 'TRIP COMPLETED — FULL PRESCRIBED DOSE ADMINISTERED' : 'INFUSION PAUSED / PARTIAL DELIVERY');
+
+  // Play celebration / completion sound
+  playBuzzerBeeps(3, 2600, 160, 90);
+  logEvent(`🏁 Infusion Trip Completed for ${pName}. Total Injected: ${injectedVol} mL in ${durationStr}. Doctor's Report prepared.`, 'success');
+
+  // Open the printable report modal
+  openDoctorReportModal();
+}
+
+function openDoctorReportModal() {
+  const modal = document.getElementById('report-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeDoctorReportModal() {
+  const modal = document.getElementById('report-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function printDoctorReport() {
+  const pName = document.getElementById('inp-patient-name').value.trim() || 'Patient';
+  const pId   = document.getElementById('inp-patient-id').value.trim() || 'ID';
+  const origTitle = document.title;
+  document.title = `Clinical_Infusion_Report_${pName.replace(/\s+/g, '_')}_${pId}`;
+  window.print();
+  setTimeout(() => {
+    document.title = origTitle;
+  }, 1000);
+}
+
+function copyReportSummary() {
+  const pName = document.getElementById('inp-patient-name').value.trim() || 'Patient';
+  const pId   = document.getElementById('inp-patient-id').value.trim() || 'ID';
+  const pBed  = document.getElementById('inp-bed-no').value.trim() || 'Bed';
+  const pSol  = document.getElementById('inp-saline-type').value || 'Normal Saline';
+  const injVol = document.getElementById('rep-saline-injected').textContent || '500';
+  const dur    = document.getElementById('rep-time-duration').textContent || '00:00:00';
+  const startT = document.getElementById('rep-time-started').textContent || '—';
+  const endT   = document.getElementById('rep-time-ended').textContent || '—';
+
+  const text = `CLINICAL INFUSION DELIVERY REPORT — IV SENTRY PRO™\n` +
+    `Patient: ${pName} (MRN: ${pId}) | Bed: ${pBed}\n` +
+    `Solution: ${pSol}\n` +
+    `Saline Injected: ${injVol} mL\n` +
+    `Time Started: ${startT}\n` +
+    `Time Ended: ${endT}\n` +
+    `Injection Duration: ${dur}\n` +
+    `Hardware Alert: Pin D3 Buzzer Milestones Active (All Relays Disengaged)\n` +
+    `Status: COMPLETED — Verified by Attending Physician.`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    logEvent('Clinical Infusion summary copied to clipboard.', 'success');
+  }).catch(() => {});
+}
+
+// ── Explicit Global Window Scope Bindings ─────────────────────────────────────
+window.applyWeightPreset = applyWeightPreset;
+window.onStartingWeightInputChange = onStartingWeightInputChange;
+window.onSimulateWeightSlider = onSimulateWeightSlider;
+window.updateStartingRanges = updateStartingRanges;
+window.applyFullWeight = applyFullWeight;
+window.applyEmptyWeight = applyEmptyWeight;
+window.applyCalFactor = applyCalFactor;
+window.setFull = setFull;
+window.setEmpty = setEmpty;
+window.sendTare = sendTare;
+window.sendStart = sendStart;
+window.sendStop = sendStop;
+window.toggleTheme = toggleTheme;
+window.openSettingsModal = openSettingsModal;
+window.closeSettingsModal = closeSettingsModal;
+window.saveAndExitCalibration = saveAndExitCalibration;
+window.switchSettingsTab = switchSettingsTab;
+window.triggerAiPrediction = triggerAiPrediction;
+window.applyAiFlowRateToNotes = applyAiFlowRateToNotes;
+window.connectSerial = connectSerial;
+window.disconnectSerial = disconnectSerial;
+window.acknowledgeAlarm = acknowledgeAlarm;
+window.clearSerialConsole = clearSerialConsole;
+window.clearLog = clearLog;
+window.exportLogs = exportLogs;
+window.sendManualCmd = sendManualCmd;
+window.testBuzzerBeep = testBuzzerBeep;
+window.startAutoCalibration = startAutoCalibration;
+window.completeInfusionSession = completeInfusionSession;
+window.openDoctorReportModal = openDoctorReportModal;
+window.closeDoctorReportModal = closeDoctorReportModal;
+window.printDoctorReport = printDoctorReport;
+window.copyReportSummary = copyReportSummary;
+

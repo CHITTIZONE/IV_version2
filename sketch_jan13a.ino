@@ -1,10 +1,21 @@
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║      SMART IV INFUSION & 10KG LOAD CELL TELEMETRY CONTROLLER             ║
-// ║      Pin Connections:                                                    ║
-// ║        HX711: DOUT -> D6, SCK -> D7 (VCC -> 5V, GND -> GND)              ║
-// ║        Buttons: START -> D12 (INPUT_PULLUP), STOP -> D11 (INPUT_PULLUP)  ║
-// ║        Relays:  R1 -> D2, R2 -> D3, R3 -> D4, R4 -> D5                   ║
-// ║        LCD:     I2C 0x27 (SDA -> A4, SCL -> A5)                          ║
+// ║   IV SENTRY PRO™ — 10KG LOAD CELL INFUSION TELEMETRY FIRMWARE           ║
+// ║   Hardware: Arduino Uno / Nano + HX711 + Pin D3 Buzzer + I2C LCD         ║
+// ║   Version:  2.5 (Precision Chronometer Timer Stop & Complete Sync)      ║
+// ║                                                                          ║
+// ║   PIN CONNECTIONS:                                                       ║
+// ║     • HX711 Load Cell:   DOUT -> Pin D6, SCK -> Pin D7 (VCC 5V, GND)    ║
+// ║     • Clinical Buzzer:   Positive (+) -> Pin D3 (GND -> GND)            ║
+// ║     • Physical Buttons:  START -> Pin D12 (INPUT_PULLUP to GND)          ║
+// ║                          STOP  -> Pin D11 (INPUT_PULLUP to GND)          ║
+// ║     • 16x2 I2C LCD:      SDA -> Pin A4, SCL -> Pin A5 (Addr: 0x27)       ║
+// ║                                                                          ║
+// ║   TELEMETRY PROTOCOL (9600 BAUD):                                        ║
+// ║     Outbound: WEIGHT:<g>, LEVEL:<%>, TIME:<hh:mm:ss>, STATUS:<state>     ║
+// ║               BUZZER:EVENT:<pct>:<beeps>, EVENT:INFUSION_COMPLETED       ║
+// ║     Inbound:  CMD:START, CMD:STOP, CMD:COMPLETE, CMD:BUZZER:<1|5>        ║
+// ║               CAL:MODE:START, CAL:MODE:EXIT, CAL:TARE, CAL:FACTOR:<val>  ║
+// ║               CAL:FULL:<val>, CAL:EMPTY:<val>, PING                      ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 #include <Wire.h>
@@ -15,34 +26,71 @@
 #define LOADCELL_DOUT_PIN  6
 #define LOADCELL_SCK_PIN   7
 
-#define START_BUTTON_PIN   12
-#define STOP_BUTTON_PIN    11
+#define BUZZER_PIN         3    // Dedicated Piezo Buzzer on Pin D3 (Relays Removed)
 
-#define RELAY_1_PIN        2   // 100%–75% stage
-#define RELAY_2_PIN        3   // 75%–50% stage
-#define RELAY_3_PIN        4   // 50%–25% stage
-#define RELAY_4_PIN        5   // Low reserve warning stage
+#define START_BUTTON_PIN   12   // Physical Push-Button (Active LOW / Internal Pullup)
+#define STOP_BUTTON_PIN    11   // Physical Push-Button (Active LOW / Internal Pullup)
 
 // ── Hardware Objects ──────────────────────────────────────────────────────────
 HX711              scale3;
 LiquidCrystal_I2C  lcd(0x27, 16, 2);
 
-// ── Calibration & Baselines ───────────────────────────────────────────────────
-// For 10kg load cell: ~228.0 (for grams output) or 228000.0 (for kg output)
+// ── Calibration & Fluid Envelope Parameters ───────────────────────────────────
+// Nominal factor for 10kg load cell transducer (~220.0 to 235.0 for grams)
 float calibrationFactor = 228.0f;  
-float fullWeight        = 500.0f;   // Grams (or kg equivalent)
-float emptyWeight       = 50.0f;
+float fullWeight        = 500.0f;   // Full Reservoir Mass (Grams)
+float emptyWeight       = 50.0f;    // Tare Mass (Bottle Empty / Tare)
 bool  calModeActive     = false;
 
-// ── Timer & Session State ─────────────────────────────────────────────────────
+// ── Infusion Session & Chronometer State ──────────────────────────────────────
 unsigned long startTime     = 0;
 unsigned long elapsedTime   = 0;
 bool          timerRunning  = false;
 int           hours = 0, minutes = 0, seconds = 0;
 char          timeStr[10]   = "00:00:00";
 
-// Serial input buffer
+// ── Buzzer Milestone Flags (Ordered: 90%, 75%, 65%, 50%, 35%, 25%, <10%) ─────
+bool beep90                  = false;
+bool beep75                  = false;
+bool beep65                  = false;
+bool beep50                  = false;
+bool beep35                  = false;
+bool beep25                  = false;
+bool beepBelow10             = false;
+bool sessionCompletedEmitted = false;
+
+// Serial reception buffer
 String rxBuf = "";
+
+// ── Sound Generator (Pin D3 Acoustic Buzzer) ──────────────────────────────────
+void beepBuzzer(int count, int freq, int onMs, int offMs) {
+  for (int i = 0; i < count; i++) {
+    tone(BUZZER_PIN, freq);
+    delay(onMs);
+    noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
+    if (i < count - 1) delay(offMs);
+  }
+}
+
+void beepBuzzer(int count, int freq) {
+  beepBuzzer(count, freq, 120, 90);
+}
+
+void beepBuzzer(int count) {
+  beepBuzzer(count, 2400, 120, 90);
+}
+
+void resetBuzzerMilestones() {
+  beep90                  = false;
+  beep75                  = false;
+  beep65                  = false;
+  beep50                  = false;
+  beep35                  = false;
+  beep25                  = false;
+  beepBelow10             = false;
+  sessionCompletedEmitted = false;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Setup
@@ -50,120 +98,181 @@ String rxBuf = "";
 void setup() {
   Serial.begin(9600);
   Serial.println(F("\n=============================================="));
-  Serial.println(F("   SMART IV 10KG LOAD CELL SYSTEM STARTING   "));
+  Serial.println(F("   IV SENTRY PRO™ — TELEMETRY CONTROLLER       "));
+  Serial.println(F("   PURE D3 BUZZER ARCHITECTURE (RELAYS REMOVED)"));
   Serial.println(F("=============================================="));
 
-  // Initialize LCD
+  // Initialize I2C LCD Display
+  Wire.begin();
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0); lcd.print(F("SMART IV SYSTEM "));
+  lcd.setCursor(0, 0); lcd.print(F("IV SENTRY PRO™  "));
   lcd.setCursor(0, 1); lcd.print(F("INITIALIZING... "));
-  delay(1500);
+  delay(800);
 
   // Initialize Pin Modes
   pinMode(START_BUTTON_PIN, INPUT_PULLUP);
   pinMode(STOP_BUTTON_PIN,  INPUT_PULLUP);
-  pinMode(RELAY_1_PIN, OUTPUT);
-  pinMode(RELAY_2_PIN, OUTPUT);
-  pinMode(RELAY_3_PIN, OUTPUT);
-  pinMode(RELAY_4_PIN, OUTPUT);
+  pinMode(BUZZER_PIN,       OUTPUT);
+  digitalWrite(BUZZER_PIN,  LOW);
 
-  // All relays OFF initially
-  digitalWrite(RELAY_1_PIN, LOW);
-  digitalWrite(RELAY_2_PIN, LOW);
-  digitalWrite(RELAY_3_PIN, LOW);
-  digitalWrite(RELAY_4_PIN, LOW);
+  // Power-on Self-Test Chirp (Confirms Pin D3 Buzzer is active)
+  beepBuzzer(1, 2400, 80, 50);
 
-  // Initialize HX711 Load Cell
+  // Initialize HX711 Load Cell Transducer
   scale3.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
   
-  if (scale3.wait_ready_timeout(1500)) {
+  // Safe readiness check (works across all HX711 libraries)
+  unsigned long waitStart = millis();
+  while (!scale3.is_ready() && (millis() - waitStart < 2000)) {
+    delay(10);
+  }
+
+  if (scale3.is_ready()) {
     scale3.set_scale(calibrationFactor);
-    scale3.tare(); // Zero scale on start
-    Serial.println(F("[HX711] Load cell initialized and zeroed."));
+    scale3.tare(); // Zero transducer baseline on startup
+    Serial.println(F("[HX711] Transducer ready & auto-zeroed to 0.0g baseline."));
   } else {
-    Serial.println(F("[WARNING] HX711 not ready! Check DOUT->D6, SCK->D7 wires."));
+    Serial.println(F("[WARNING] HX711 transducer offline. Verify DOUT->D6, SCK->D7."));
   }
 
   lcd.clear();
-  lcd.setCursor(0, 0); lcd.print(F("IV MEASURE UNIT1"));
-  lcd.setCursor(0, 1); lcd.print(F("STANDBY (D12/UI)"));
-  delay(1200);
+  lcd.setCursor(0, 0); lcd.print(F("IV SENTRY PRO D3"));
+  lcd.setCursor(0, 1); lcd.print(F("STANDBY (READY) "));
+  delay(800);
 
-  // Ready Handshake for UI & Monitor
+  // Initial Telemetry Handshake Payload
   Serial.println(F("PONG:IVMU_1_PRO"));
+  Serial.print(F("CAL_FULL:"));   Serial.println(fullWeight, 1);
+  Serial.print(F("CAL_EMPTY:"));  Serial.println(emptyWeight, 1);
+  Serial.print(F("CAL_FACTOR:")); Serial.println(calibrationFactor, 1);
+  Serial.println(F("BUZZER_PIN:D3"));
   Serial.println(F("STATUS:IDLE"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Command Handler (Web UI + Serial Monitor commands)
+// Command Handler (Processes Web Serial & Terminal Instructions)
 // ─────────────────────────────────────────────────────────────────────────────
 void processCommand(String cmd) {
   cmd.trim();
 
+  // START INFUSION SESSION
   if (cmd == F("CMD:START") || cmd == F("START")) {
     if (!timerRunning) {
+      if (sessionCompletedEmitted) {
+        // If restarting after a completed session, reset timer from 0
+        elapsedTime = 0;
+        sessionCompletedEmitted = false;
+        resetBuzzerMilestones();
+      }
       timerRunning = true;
-      startTime    = millis();
+      startTime    = millis() - elapsedTime; // Resume cleanly from accumulated time if paused
       Serial.println(F("STATUS:RUNNING"));
-      Serial.println(F(">>> Timer Started"));
+      Serial.println(F(">>> Infusion Started. D3 Buzzer tracking armed."));
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print(F("INFUSION ACTIVE "));
-      lcd.setCursor(0, 1); lcd.print(F("STARTED         "));
-      delay(800);
+      lcd.setCursor(0, 1); lcd.print(F("SESSION RUNNING "));
+      beepBuzzer(1, 2600, 120, 60);
     }
   }
+  // STOP / PAUSE INFUSION SESSION — HALTS TIMER IMMEDIATELY
   else if (cmd == F("CMD:STOP") || cmd == F("STOP")) {
     if (timerRunning) {
-      timerRunning = false;
-      elapsedTime  = millis() - startTime;
-      digitalWrite(RELAY_1_PIN, LOW);
-      digitalWrite(RELAY_2_PIN, LOW);
-      digitalWrite(RELAY_3_PIN, LOW);
-      digitalWrite(RELAY_4_PIN, LOW);
+      elapsedTime  = millis() - startTime; // Lock elapsed time permanently
+      timerRunning = false;                // TIMER STOPS
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
       Serial.println(F("STATUS:STOPPED"));
-      Serial.println(F(">>> Timer Stopped. All relays are OFF."));
+      Serial.println(F(">>> Infusion Paused / Stopped. Timer halted."));
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print(F("INFUSION PAUSED "));
-      lcd.setCursor(0, 1); lcd.print(F("STOPPED         "));
-      delay(800);
+      lcd.setCursor(0, 1); lcd.print(F("STOPPED / HOLD  "));
     }
   }
+  // COMPLETE INFUSION SESSION — LOCKS FINAL TIME & SILENCES ALL ALARMS
+  else if (cmd == F("CMD:COMPLETE") || cmd == F("COMPLETE")) {
+    if (timerRunning) {
+      elapsedTime = millis() - startTime; // Lock final duration
+    }
+    timerRunning = false;                 // TIMER STOPS
+    sessionCompletedEmitted = true;
+    noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
+    Serial.println(F("EVENT:INFUSION_COMPLETED"));
+    Serial.println(F("STATUS:COMPLETED"));
+    lcd.clear();
+    lcd.setCursor(0, 0); lcd.print(F("TRIP COMPLETED! "));
+    lcd.setCursor(0, 1); lcd.print(F("REPORT AUDIT OK "));
+    beepBuzzer(3, 2600, 150, 100);
+  }
+  // AUTO-CALIBRATION: AUTOMATIC ZERO TARE
+  else if (cmd == F("CAL:MODE:START") || cmd == F("CAL:AUTO")) {
+    calModeActive = true;
+    noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
+    scale3.tare(); // Auto-zero baseline
+    Serial.println(F("CAL_MODE:ACTIVE"));
+    Serial.println(F("CAL:TARED"));
+    Serial.println(F("CAL:AUTO_ZERO_OK"));
+    Serial.println(F(">>> Auto-Calibration started: Transducer auto-tared to 0.0g"));
+    lcd.clear();
+    lcd.setCursor(0, 0); lcd.print(F("AUTO CALIBRATION"));
+    lcd.setCursor(0, 1); lcd.print(F("AUTO-ZERO: 0.0g "));
+    beepBuzzer(1, 2000, 80, 50);
+  }
+  // EXIT CALIBRATION MODE
+  else if (cmd == F("CAL:MODE:EXIT")) {
+    calModeActive = false;
+    Serial.println(F("CAL_MODE:INACTIVE"));
+    lcd.clear();
+    lcd.setCursor(0, 0); lcd.print(F("CALIBRATION OK  "));
+    lcd.setCursor(0, 1); lcd.print(F("STANDBY MODE    "));
+    delay(400);
+  }
+  // MANUAL ZERO TARE
   else if (cmd == F("CAL:TARE") || cmd == F("TARE") || cmd == F("t") || cmd == F("T")) {
     scale3.tare();
     Serial.println(F("CAL:TARED"));
     Serial.println(F(">>> Scale Zeroed (Tare OK)"));
     lcd.clear();
     lcd.setCursor(0, 0); lcd.print(F("ZERO TARE OK    "));
-    delay(800);
+    lcd.setCursor(0, 1); lcd.print(F("WT: 0.0 g       "));
+    beepBuzzer(1, 2200, 80, 50);
+    delay(400);
   }
+  // UPDATE CALIBRATION FACTOR
   else if (cmd.startsWith(F("CAL:FACTOR:"))) {
     calibrationFactor = cmd.substring(11).toFloat();
     if (calibrationFactor != 0) scale3.set_scale(calibrationFactor);
     Serial.print(F("CAL_FACTOR:")); Serial.println(calibrationFactor, 1);
   }
+  // UPDATE FULL RESERVOIR MASS
   else if (cmd.startsWith(F("CAL:FULL:"))) {
     fullWeight = cmd.substring(9).toFloat();
     Serial.print(F("CAL_FULL:")); Serial.println(fullWeight, 1);
   }
+  // UPDATE EMPTY TARE MASS
   else if (cmd.startsWith(F("CAL:EMPTY:"))) {
     emptyWeight = cmd.substring(10).toFloat();
     Serial.print(F("CAL_EMPTY:")); Serial.println(emptyWeight, 1);
   }
-  else if (cmd == F("CAL:MODE:START")) {
-    calModeActive = true;
-    digitalWrite(RELAY_1_PIN, LOW);
-    digitalWrite(RELAY_2_PIN, LOW);
-    digitalWrite(RELAY_3_PIN, LOW);
-    digitalWrite(RELAY_4_PIN, LOW);
-    Serial.println(F("CAL_MODE:ACTIVE"));
+  // MANUAL BUZZER TEST: 1 BEEP
+  else if (cmd == F("CMD:BUZZER:1")) {
+    beepBuzzer(1, 2400, 150, 80);
+    Serial.println(F("BUZZER:TEST:1_OK"));
   }
-  else if (cmd == F("CAL:MODE:EXIT")) {
-    calModeActive = false;
-    Serial.println(F("CAL_MODE:INACTIVE"));
+  // MANUAL BUZZER TEST: 5 BEEPS
+  else if (cmd == F("CMD:BUZZER:5")) {
+    beepBuzzer(5, 2800, 100, 90);
+    Serial.println(F("BUZZER:TEST:5_OK"));
   }
+  // HANDSHAKE PING
   else if (cmd == F("PING")) {
     Serial.println(F("PONG:IVMU_1_PRO"));
+    Serial.print(F("CAL_FULL:"));   Serial.println(fullWeight, 1);
+    Serial.print(F("CAL_EMPTY:"));  Serial.println(emptyWeight, 1);
+    Serial.print(F("CAL_FACTOR:")); Serial.println(calibrationFactor, 1);
+    Serial.println(F("BUZZER_PIN:D3"));
   }
 }
 
@@ -172,7 +281,7 @@ void processCommand(String cmd) {
 // ─────────────────────────────────────────────────────────────────────────────
 void loop() {
 
-  // ── 1. Read Serial Commands ────────────────────────────────────────────────
+  // ── 1. Ingest Incoming Serial Stream ───────────────────────────────────────
   while (Serial.available()) {
     char c = (char)Serial.read();
     if (c == '\n') {
@@ -183,24 +292,21 @@ void loop() {
     }
   }
 
-  // ── 2. Read Weight from HX711 Load Cell ───────────────────────────────────
-  long rawADC = 0;
+  // ── 2. Read Transducer Weight from HX711 ──────────────────────────────────
   float weight = 0.0f;
-
   if (scale3.is_ready()) {
-    rawADC = scale3.read();
-    weight = scale3.get_units(3); // 3-sample average for stability
+    weight = scale3.get_units(3); // 3-sample average for rock-solid stability
   } else {
-    weight = scale3.get_units(1); // Immediate read fallback
+    weight = scale3.get_units(1); // Fast fallback
   }
 
-  // ── 3. Calculate IV Percentage Level (0% to 100%) ──────────────────────────
+  // ── 3. Calculate IV Volume Percentage (0% to 100%) ─────────────────────────
   float range = fullWeight - emptyWeight;
   if (range < 1.0f) range = 1.0f;
   int ivLevel = (int)(((weight - emptyWeight) / range) * 100.0f);
   ivLevel = constrain(ivLevel, 0, 100);
 
-  // ── 4. Chronometer Update ──────────────────────────────────────────────────
+  // ── 4. Chronometer Update (Frozen when stopped or completed) ───────────────
   if (timerRunning) {
     elapsedTime = millis() - startTime;
   }
@@ -209,25 +315,14 @@ void loop() {
   seconds = (elapsedTime / 1000UL)    % 60;
   snprintf(timeStr, sizeof(timeStr), "%02d:%02d:%02d", hours, minutes, seconds);
 
-  // ── 5. Push Telemetry (Supports both Serial Monitor & Web UI) ──────────────
-  // Dual-format stream:
+  // ── 5. Push Real-Time Telemetry Stream to Web Serial API ───────────────────
   Serial.print(F("WEIGHT:")); Serial.println(weight, 1);
   Serial.print(F("LEVEL:"));  Serial.println(ivLevel);
   Serial.print(F("TIME:"));   Serial.println(timeStr);
-  Serial.print(F("STATUS:")); Serial.println(timerRunning ? F("RUNNING") : (calModeActive ? F("CAL_MODE") : F("IDLE")));
+  Serial.print(F("STATUS:")); Serial.println(timerRunning ? F("RUNNING") : (calModeActive ? F("CAL_MODE") : (sessionCompletedEmitted ? F("COMPLETED") : F("IDLE"))));
 
-  // Human-readable diagnostic line:
-  Serial.print(F(">> Weight: "));
-  Serial.print(weight, 1);
-  Serial.print(F(" g | Level: "));
-  Serial.print(ivLevel);
-  Serial.print(F("% | Raw ADC: "));
-  Serial.print(rawADC);
-  Serial.print(F(" | Time: "));
-  Serial.println(timeStr);
-
-  // ── 6. Check Physical Buttons ──────────────────────────────────────────────
-  // START BUTTON (D12)
+  // ── 6. Check Hardware Push-Buttons (D12 = START, D11 = STOP) ───────────────
+  // START BUTTON (Pin D12)
   static bool lastStartBtn = HIGH;
   bool curStart = digitalRead(START_BUTTON_PIN);
   if (lastStartBtn == HIGH && curStart == LOW) {
@@ -235,7 +330,7 @@ void loop() {
   }
   lastStartBtn = curStart;
 
-  // STOP BUTTON (D11)
+  // STOP BUTTON (Pin D11) — HALTS TIMER IMMEDIATELY
   static bool lastStopBtn = HIGH;
   bool curStop = digitalRead(STOP_BUTTON_PIN);
   if (lastStopBtn == HIGH && curStop == LOW) {
@@ -243,44 +338,67 @@ void loop() {
   }
   lastStopBtn = curStop;
 
-  // ── 7. Relay Actuation (Based on IV Level / Weight when timer is running) ───
+  // ── 7. D3 Buzzer Milestone Acoustic Alerts (Descending Order) ──────────────
   if (timerRunning && !calModeActive) {
-    // Relay 1: 100% - 75%
-    if (ivLevel >= 75 || (weight >= 375.0f)) {
-      digitalWrite(RELAY_1_PIN, HIGH);
-    } else {
-      digitalWrite(RELAY_1_PIN, LOW);
+
+    // 90% Milestone: 1 Beep (2400 Hz)
+    if (ivLevel <= 90 && !beep90) {
+      beep90 = true;
+      Serial.println(F("BUZZER:EVENT:90:1"));
+      beepBuzzer(1, 2400, 150, 80);
+    }
+    // 75% Milestone: 1 Beep (2400 Hz)
+    if (ivLevel <= 75 && !beep75) {
+      beep75 = true;
+      Serial.println(F("BUZZER:EVENT:75:1"));
+      beepBuzzer(1, 2400, 150, 80);
+    }
+    // 65% Milestone: 1 Beep (2400 Hz)
+    if (ivLevel <= 65 && !beep65) {
+      beep65 = true;
+      Serial.println(F("BUZZER:EVENT:65:1"));
+      beepBuzzer(1, 2400, 150, 80);
+    }
+    // 50% Milestone: 1 Beep (2400 Hz)
+    if (ivLevel <= 50 && !beep50) {
+      beep50 = true;
+      Serial.println(F("BUZZER:EVENT:50:1"));
+      beepBuzzer(1, 2400, 150, 80);
+    }
+    // 35% Milestone: 1 Beep (2500 Hz)
+    if (ivLevel <= 35 && !beep35) {
+      beep35 = true;
+      Serial.println(F("BUZZER:EVENT:35:1"));
+      beepBuzzer(1, 2500, 150, 80);
+    }
+    // 25% Milestone: 1 Beep (2600 Hz)
+    if (ivLevel <= 25 && !beep25) {
+      beep25 = true;
+      Serial.println(F("BUZZER:EVENT:25:1"));
+      beepBuzzer(1, 2600, 150, 80);
+    }
+    // Critical Milestone (< 10%): 5 Rapid Alarm Beeps (2800 Hz)
+    if (ivLevel < 10 && !beepBelow10) {
+      beepBelow10 = true;
+      Serial.println(F("BUZZER:EVENT:10:5"));
+      beepBuzzer(5, 2800, 100, 90);
     }
 
-    // Relay 2: 75% - 50%
-    if ((ivLevel >= 50 && ivLevel < 75) || (weight >= 250.0f && weight < 375.0f)) {
-      digitalWrite(RELAY_2_PIN, HIGH);
-    } else {
-      digitalWrite(RELAY_2_PIN, LOW);
+    // Automatic Trip Completion (Fluid Level 0% or weight <= empty tare)
+    if (ivLevel <= 0 && !sessionCompletedEmitted) {
+      sessionCompletedEmitted = true;
+      elapsedTime = millis() - startTime; // Lock final duration
+      timerRunning = false;               // STOP TIMER IMMEDIATELY
+      Serial.println(F("EVENT:INFUSION_COMPLETED"));
+      Serial.println(F("STATUS:COMPLETED"));
+      beepBuzzer(3, 2600, 200, 100);
+      lcd.clear();
+      lcd.setCursor(0, 0); lcd.print(F("TRIP COMPLETED! "));
+      lcd.setCursor(0, 1); lcd.print(F("DOCTOR REPORT OK"));
     }
-
-    // Relay 3: 50% - 25%
-    if ((ivLevel >= 25 && ivLevel < 50) || (weight >= 125.0f && weight < 250.0f)) {
-      digitalWrite(RELAY_3_PIN, HIGH);
-    } else {
-      digitalWrite(RELAY_3_PIN, LOW);
-    }
-
-    // Relay 4: 25% - 0% (Low / Critical)
-    if ((ivLevel > 0 && ivLevel < 25) || (weight > 0.0f && weight < 125.0f)) {
-      digitalWrite(RELAY_4_PIN, HIGH);
-    } else {
-      digitalWrite(RELAY_4_PIN, LOW);
-    }
-  } else {
-    // All relays OFF if timer not running or in calibration
-    digitalWrite(RELAY_1_PIN, LOW);
-    digitalWrite(RELAY_2_PIN, LOW);
-    digitalWrite(RELAY_3_PIN, LOW);
-    digitalWrite(RELAY_4_PIN, LOW);
   }
 
-  // ── 8. LCD Display Refresh ─────────────────────────────────────────────────
+  // ── 8. I2C LCD Display Real-Time Refresh ───────────────────────────────────
   if (calModeActive) {
     lcd.setCursor(0, 0);
     lcd.print(F("CALIBRATION MODE"));
@@ -288,17 +406,27 @@ void loop() {
     lcd.print(F("WT: "));
     lcd.print(weight, 1);
     lcd.print(F(" g     "));
+  } else if (sessionCompletedEmitted) {
+    lcd.setCursor(0, 0);
+    lcd.print(F("TRIP COMPLETED! "));
+    lcd.setCursor(0, 1);
+    lcd.print(F("TIME: "));
+    lcd.print(timeStr);
   } else {
-    // Line 1: Time + Status
+    // Row 1: Session Time & Status
     lcd.setCursor(0, 0);
     lcd.print(F("Time: "));
     lcd.print(timeStr);
     lcd.print(F(" "));
 
-    // Line 2: IV% + Weight
+    // Row 2: Level %, Weight, State Indicator
     lcd.setCursor(0, 1);
     if (timerRunning) {
-      lcd.print(F("RUN "));
+      if (ivLevel < 10) {
+        lcd.print(F("ALRT!"));
+      } else {
+        lcd.print(F("RUN "));
+      }
     } else {
       lcd.print(F("STP "));
     }
@@ -306,8 +434,8 @@ void loop() {
     lcd.print(ivLevel);
     lcd.print(F("% W:"));
     lcd.print((int)weight);
-    lcd.print(F("g "));
+    lcd.print(F("g   "));
   }
 
-  delay(400); // Telemetry cycle interval
+  delay(350); // Telemetry sampling cadence
 }

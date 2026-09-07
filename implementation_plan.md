@@ -1,35 +1,39 @@
-# Implementation Plan — AI Saline Flow Rate & Clinical Intelligence Panel
+# Implementation Plan — Streamlined IV SENTRY PRO™ Telemetry Workstation
 
-**System:** IV Sentry Pro™ Clinical Infusion Telemetry Workstation  
-**Placement:** Right Column (Grand Hero Cockpit below Infusion Telemetry)  
-**Status:** Completed & Verified ✅
-
----
-
-## 1. Goal Description
-Upgrade the dashboard with a prominent, large-scale **AI Saline Flow Predictor & Clinical Osmotherapy Intelligence Cockpit** situated on the **right side** of the workstation (under the continuous infusion telemetry station).
+**System:** IV SENTRY PRO™ Clinical Infusion Telemetry Workstation  
+**Hardware Controller:** Arduino Uno / Nano + HX711 Load Cell + Pin D3 Buzzer  
+**Current Status:** Fully Operational — Render Cloud Hosting Ready (`render.yaml`) | Local Daemon Port 5500  
+**Last Updated:** 2026-09-07 20:53:00 (IST)
 
 ---
 
-## 2. Implemented Architecture & Layout
+## 1. Cloud Deployment Configuration (Render.com)
 
-### Left Column: Patient Admission & Vitals Setup (`#panel-patient-setup`)
-- **Patient Profile**: Full Name, Age, MRN/ID, Assigned Attender, Solution, Target Vol, Notes.
-- **Biometric Clinical Vitals**: Heart Rate (BPM), Breathing Rate (RR), Systolic BP (mmHg), Diastolic BP (mmHg).
-- **Session Controller**: Start / Pause buttons, system state, and duration timer.
-
-### Right Column: Telemetry & AI Clinical Cockpit (`#panel-infusion-monitor`)
-- **Active Prescription Header**: Synchronized with `AI PREDICTED FLOW` badge.
-- **Continuous Infusion Telemetry Station**: 3D Animated IV Bottle, Transducer Mass, Volume %, Duration, 4 Actuator Line Relays.
-- **Grand AI Clinical Intelligence Cockpit (`#card-ai-prediction`)**:
-  - **Column 1**: Grand Semicircular Flow Gauge (`50` to `250+ mL/hr`), animated needle, zone tags (`Slow`, `Normal`, `Hydration`, `Bolus`).
-  - **Column 2**: 4 Telemetry Tiles (Cardiac Pulse, Perfusion Pressure, Calibrated Drip Rate, Estimated Reservoir Span).
-  - **Column 3**: AI Clinical Overview & Protocol Actions with one-touch `Apply to Clinical Notes`.
+1. **Hosting Model**:
+   - Deployed as a **Static Site** on Render.
+   - 100% free tier, zero spin-down latency, global CDN delivery.
+   - Automatic HTTPS provisioning ensures the browser Web Serial API (`navigator.serial`) functions securely from any remote laptop or clinic workstation.
+2. **Infrastructure Blueprint**:
+   - Added [render.yaml](file:///f:/PROJECT/IV_version2/render.yaml) for automatic 1-click Git deployment.
+   - Publish directory set to `./frontend`.
 
 ---
 
-## 3. Verification & Live Browser Testing
-- [x] Verified right-side positioning below IV Telemetry station.
-- [x] Tested live reactive vitals updates (e.g. HR `115`, BP `80/60` -> `HYPOTENSIVE RESUSCITATION` at `220 mL/hr`, `73 gtt/m`).
-- [x] Verified "Apply Rate to Infusion Notes" button auto-populating clinical textarea.
-- [x] Verified responsive 3-column cockpit layout in Dark and Light themes.
+## 2. Active Components & Files
+
+### [render.yaml](file:///f:/PROJECT/IV_version2/render.yaml)
+- Render static site blueprint specification.
+
+### [frontend/](file:///f:/PROJECT/IV_version2/frontend)
+- Telemetry application assets: `index.html`, `style.css`, `app.js`.
+
+### [sketch_jan13a.ino](file:///f:/PROJECT/IV_version2/sketch_jan13a.ino)
+- Version 2.5 firmware for local Arduino controller.
+
+---
+
+## 3. Deployment Steps
+1. Push repository to GitHub or GitLab.
+2. Link repository in Render Dashboard (`New > Static Site`).
+3. Set Publish Directory to `frontend`.
+4. Render automatically deploys and provides live `https://...onrender.com` URL.

@@ -1,0 +1,14 @@
+# Render Blueprint Specification
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: iv-sentry-pro
+    runtime: static
+    buildCommand: "" # No build step required for vanilla HTML/CSS/JS
+    staticPublishPath: ./frontend
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
