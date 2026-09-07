@@ -67,21 +67,22 @@ Create a unified, robust data binding function `updateDoctorReportData()` in bot
 - **[MODIFY] `frontend/index.html` & `index.html`**:
   - Verify action buttons on `#alarm-overlay` and `#report-modal` invoke the updated functions cleanly.
 
-### C. A4 PDF Print Formatting & Warning Popup Sequencing
+### C. A4 PDF Print Formatting & 5-Second Warning Popup Sequence
 - Extended `@media print` CSS rules in `style.css` and `frontend/style.css` to enforce `@page { size: A4 portrait; margin: 10mm; }` with full-page white background, high-contrast black typography, clean element borders, and explicit suppression of all workstation headers/sidebars/buttons.
-- Refactored `< 10%` critical depletion flow:
-  - When IV fluid level drops below 10%, the timer stops, 10s acoustic alarm beeps play, and the **Red Warning Popup (`#alarm-overlay`) appears FIRST**.
-  - `completeInfusionSession(false)` prepares all data in memory, but guards `openDoctorReportModal(false)` so that the red warning popup stays visible to the clinician first.
-  - Clicking **"View & Print Doctor's Report"** on the warning popup dismisses the alarm, opens `#report-modal`, and auto-triggers `window.print()` for immediate A4 PDF saving.
+- **Frontend 5-Second Warning Popup Automation**:
+  - When IV fluid level drops below 10%, the timer stops, 5-second acoustic alarm beeps play, and the **Red Warning Popup (`#alarm-overlay`) appears FIRST**.
+  - `handleCriticalEmptyAlarm()` schedules a **5-second timer** (`5000ms`).
+  - After 5 seconds, the alarm is automatically **muted** (`acknowledgeAlarm()`), the warning popup is dismissed, and the Doctor's Report modal (`#report-modal`) is automatically **opened and hydrated** in proper format.
 
 ---
 
 ## 4. Verification Plan & Status
 
 ### Completed & Verified Actions
-1. **Warning Popup First**: Confirmed `< 10%` depletion shows `#alarm-overlay` first without immediately covering it with `#report-modal`.
-2. **View & Print Flow**: Confirmed clicking "View & Print Doctor's Report" on `#alarm-overlay` dismisses the overlay, opens the Doctor Report modal, and launches the native A4 PDF print/save dialog.
+1. **Frontend 5s Warning Popup**: Confirmed `< 10%` depletion shows `#alarm-overlay` for 5 seconds with alert audio.
+2. **Auto-Mute & Doctor Report**: Confirmed after 5 seconds, the alarm mutes automatically, `#alarm-overlay` closes, and `#report-modal` displays the populated report in clean A4 format.
 3. **A4 Sheet PDF Output**: Confirmed `@media print` formats the Doctor's Summary cleanly on a single A4 page with crisp borders and zero workstation UI background chrome.
-4. **Git Deployment**: Committed and pushed changes to `origin/main` (`6f644f4`), triggering auto-deploy on Render.
-5. **Resolution Logging**: Created timestamped log entry at `log/2026-09-08_00-22_a4_pdf_report_and_warning_popup.md`.
+4. **Git Deployment**: Committed and pushed changes to `origin/main` (`b099b5d`), triggering auto-deploy on Render.
+5. **Resolution Logging**: Created timestamped log entry at `log/2026-09-08_00-27_frontend_5s_warning_popup_automute_report.md`.
+
 

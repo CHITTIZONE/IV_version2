@@ -2612,11 +2612,17 @@ textarea {
 
 /* ══════════════════ DOCTOR'S PRINTABLE INFUSION REPORT MODAL ══════════════════ */
 .report-modal-dialog {
-  max-width: 960px;
-  width: 95%;
-  max-height: 92vh;
+  max-width: 980px;
+  width: 96%;
+  max-height: calc(100vh - 32px);
+  height: 92vh;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  margin: auto;
+  border: 1px solid var(--border-card);
 }
 
 .report-modal-header {
@@ -2624,8 +2630,9 @@ textarea {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-card);
-  padding: 16px 24px;
+  padding: 14px 20px;
   background: var(--bg-surface);
+  flex-shrink: 0;
 }
 
 .doc-icon {
@@ -2648,13 +2655,14 @@ textarea {
 
 .report-paper-container {
   overflow-y: auto;
-  padding: 24px;
+  padding: 20px;
   background: #060c16;
   flex: 1;
+  min-height: 0;
 }
 
 [data-theme="light"] .report-paper-container {
-  background: #e2e8f0;
+  background: #cbd5e1;
 }
 
 /* The actual paper sheet mimicking an official hospital letterhead */
@@ -2662,12 +2670,12 @@ textarea {
   background: #ffffff;
   color: #0f172a;
   border-radius: 8px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
-  padding: 36px 44px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+  padding: 28px 36px;
   margin: 0 auto;
   max-width: 860px;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .report-doc-header {
