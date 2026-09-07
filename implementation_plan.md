@@ -2,38 +2,45 @@
 
 **System:** IV SENTRY PRO™ Clinical Infusion Telemetry Workstation  
 **Hardware Controller:** Arduino Uno / Nano + HX711 Load Cell + Pin D3 Buzzer  
-**Current Status:** Fully Operational — Render Cloud Hosting Ready (`render.yaml`) | Local Daemon Port 5500  
-**Last Updated:** 2026-09-07 20:53:00 (IST)
+**Current Status:** Render CSS Loading Fix Applied (Dual Root/Frontend Assets + Server Fallback) | Local Daemon Port 5500  
+**Last Updated:** 2026-09-07 21:12:00 (IST)
 
 ---
 
-## 1. Cloud Deployment Configuration (Render.com)
+## 1. Render Hosting Asset Resolution
 
-1. **Hosting Model**:
-   - Deployed as a **Static Site** on Render.
-   - 100% free tier, zero spin-down latency, global CDN delivery.
-   - Automatic HTTPS provisioning ensures the browser Web Serial API (`navigator.serial`) functions securely from any remote laptop or clinic workstation.
-2. **Infrastructure Blueprint**:
-   - Added [render.yaml](file:///f:/PROJECT/IV_version2/render.yaml) for automatic 1-click Git deployment.
-   - Publish directory set to `./frontend`.
+1. **Problem**: CSS failed to render on Render due to Publish Directory pointing to root while assets were previously located only in `frontend/`.
+2. **Dual-Path Resolution**:
+   - Assets mirrored in both root `./` and `./frontend`:
+     - `index.html`
+     - `style.css`
+     - `app.js`
+   - Works regardless of whether Render Publish Directory is set to `.` or `frontend`.
+3. **Web Service Fallback**:
+   - Added `server.js` and `package.json` to handle cases where the project is deployed as a Render **Web Service** instead of a **Static Site**.
 
 ---
 
 ## 2. Active Components & Files
 
+### [index.html](file:///f:/PROJECT/IV_version2/index.html) & [frontend/index.html](file:///f:/PROJECT/IV_version2/frontend/index.html)
+- Telemetry workstation markup.
+
+### [style.css](file:///f:/PROJECT/IV_version2/style.css) & [frontend/style.css](file:///f:/PROJECT/IV_version2/frontend/style.css)
+- Balanced CSS styling with Doctor Report formatting.
+
+### [app.js](file:///f:/PROJECT/IV_version2/app.js) & [frontend/app.js](file:///f:/PROJECT/IV_version2/frontend/app.js)
+- Workstation logic and Web Serial stream parser.
+
+### [server.js](file:///f:/PROJECT/IV_version2/server.js) & [package.json](file:///f:/PROJECT/IV_version2/package.json)
+- Standalone static server with strict MIME types for Render Web Service compatibility.
+
 ### [render.yaml](file:///f:/PROJECT/IV_version2/render.yaml)
-- Render static site blueprint specification.
-
-### [frontend/](file:///f:/PROJECT/IV_version2/frontend)
-- Telemetry application assets: `index.html`, `style.css`, `app.js`.
-
-### [sketch_jan13a.ino](file:///f:/PROJECT/IV_version2/sketch_jan13a.ino)
-- Version 2.5 firmware for local Arduino controller.
+- Updated static blueprint with `staticPublishPath: ./`.
 
 ---
 
-## 3. Deployment Steps
-1. Push repository to GitHub or GitLab.
-2. Link repository in Render Dashboard (`New > Static Site`).
-3. Set Publish Directory to `frontend`.
-4. Render automatically deploys and provides live `https://...onrender.com` URL.
+## 3. Verification & Deployment Steps
+1. Commit all modified files (`git add .`, `git commit -m "Fix CSS asset paths and server fallback"`, `git push origin main`).
+2. On Render Dashboard, click **Manual Deploy > Deploy latest commit**.
+3. Clear browser cache (Ctrl+F5) and verify styles load cleanly.

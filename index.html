@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IV SENTRY PRO™ — Clinical Infusion Telemetry System</title>
+  <meta name="description" content="IV Sentry Pro Clinical Infusion Telemetry Station — Real-time continuous fluid monitoring, automated occlusion/empty detection, and patient telemetry." />
+  
+  <!-- Premium Medical & Technical Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Medical Grid & ECG Pattern Background -->
+<div class="medical-bg-pattern">
+  <div class="medical-ecg-trace"></div>
+</div>
+
+<!-- ══════════════════ TOP MEDICAL HEADER BAR ══════════════════ -->
+<header id="app-header">
+  <div class="header-left">
+    <div class="product-brand">
+      <div class="brand-badge-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">IV SENTRY <span class="brand-tag">PRO</span></div>
+        <div class="brand-sub">Clinical Infusion Telemetry Workstation</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <!-- Active Unit Telemetry Badge -->
+    <div class="unit-telemetry-badge">
+      <span class="unit-id-tag">UNIT-01</span>
+      <div class="unit-meta">
+        <span class="unit-name">IV Measurement Unit 1</span>
+        <div id="conn-status" class="conn-pill disconnected">
+          <span class="conn-dot"></span>
+          <span id="conn-label">Offline</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <!-- Dark / Light Theme Toggle Switch -->
+    <button id="btn-theme-toggle" class="btn btn-theme-switch" title="Toggle Light / Dark Clinical Theme" onclick="toggleTheme()">
+      <span class="theme-icon-dark">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </span>
+      <span class="theme-icon-light hidden">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="12" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </span>
+      <span id="theme-label">Dark</span>
+    </button>
+
+    <!-- Doctor's Printable Infusion Completion Report Button -->
+    <button id="btn-open-report" class="btn btn-secondary" title="View & Print Official Doctor's Infusion Report" onclick="openDoctorReportModal()">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+      <span>📄 Doctor Report</span>
+    </button>
+
+    <!-- Quick Action: System Settings / Calibration / Diagnostics -->
+    <button id="btn-settings-modal" class="btn btn-secondary" title="System Settings, Calibration & Diagnostics" onclick="openSettingsModal('calibration')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+      <span>Settings &amp; Calibration</span>
+    </button>
+
+    <!-- Connect / Disconnect Action -->
+    <button id="btn-connect" class="btn btn-primary" onclick="connectSerial()">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+      <span>Connect Unit 1</span>
+    </button>
+
+    <button id="btn-disconnect" class="btn btn-outline-danger hidden" onclick="disconnectSerial()">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+      <span>Disconnect</span>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════ CRITICAL ALARM OVERLAY ══════════════════ -->
+<div id="alarm-overlay" class="alarm-overlay hidden">
+  <div class="alarm-modal-card">
+    <div class="alarm-pulse-ring"></div>
+    <div class="alarm-header">
+      <div class="alarm-icon-badge">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+      <div>
+        <h2 class="alarm-title">CRITICAL INFUSION ALERT</h2>
+        <div class="alarm-subtitle">Saline reservoir depleted — Immediate bag replacement required</div>
+      </div>
+    </div>
+    <div class="alarm-patient-card" id="alarm-patient-info">
+      Patient: — | ID: —
+    </div>
+    <div class="alarm-actions">
+      <button class="btn btn-alarm-ack" onclick="acknowledgeAlarm()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Mute &amp; Acknowledge Alarm</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MAIN WORKSTATION GRID ══════════════════ -->
+<main id="main-grid">
+
+  <!-- ── LEFT COLUMN: Patient Admission & Infusion Setup ── -->
+  <aside id="panel-patient-setup">
+
+    <!-- Patient Admission Card -->
+    <div class="card card-glow" id="card-patient">
+      <div class="card-header">
+        <div class="card-header-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div>
+          <h2>Patient Admission</h2>
+          <span class="card-sub">Infusion prescription &amp; profile</span>
+        </div>
+      </div>
+      
+      <div class="card-body">
+        <div class="form-group">
+          <label for="inp-patient-name">Patient Full Name <span class="req-star">*</span></label>
+          <input type="text" id="inp-patient-name" placeholder="e.g., Alexander Wright" autocomplete="off" />
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inp-patient-age">Age</label>
+            <input type="number" id="inp-patient-age" placeholder="e.g., 42" min="0" max="130" value="42" oninput="triggerAiPrediction()" />
+          </div>
+          <div class="form-group">
+            <label for="inp-patient-id">MRN / Patient ID <span class="req-star">*</span></label>
+            <input type="text" id="inp-patient-id" placeholder="e.g., MED-8841" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-attender-name">Assigned Attender / Caregiver</label>
+          <input type="text" id="inp-attender-name" placeholder="Nurse / Guardian name" />
+        </div>
+
+        <!-- Patient Clinical Vitals & Hemodynamics Section -->
+        <div class="vitals-input-section">
+          <div class="vitals-section-header">
+            <div class="vitals-title-wrap">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+              <span>PATIENT CLINICAL VITALS</span>
+            </div>
+            <span class="vitals-live-tag">AI Input</span>
+          </div>
+
+          <div class="form-row-2 mb-2">
+            <div class="form-group">
+              <label for="inp-patient-hr">Heart Rate (BPM)</label>
+              <div class="input-with-unit">
+                <input type="number" id="inp-patient-hr" placeholder="75" min="30" max="220" value="76" oninput="triggerAiPrediction()" />
+                <span class="input-unit-tag">bpm</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="inp-patient-rr">Breathing (RR)</label>
+              <div class="input-with-unit">
+                <input type="number" id="inp-patient-rr" placeholder="16" min="6" max="60" value="16" oninput="triggerAiPrediction()" />
+                <span class="input-unit-tag">bpm</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="inp-patient-sbp">Systolic BP</label>
+              <div class="input-with-unit">
+                <input type="number" id="inp-patient-sbp" placeholder="120" min="50" max="250" value="120" oninput="triggerAiPrediction()" />
+                <span class="input-unit-tag">mmHg</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="inp-patient-dbp">Diastolic BP</label>
+              <div class="input-with-unit">
+                <input type="number" id="inp-patient-dbp" placeholder="80" min="30" max="150" value="80" oninput="triggerAiPrediction()" />
+                <span class="input-unit-tag">mmHg</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-saline-type">Infusion Solution</label>
+          <select id="inp-saline-type" onchange="triggerAiPrediction()">
+            <option value="0.9% Normal Saline (NS)">0.9% Normal Saline (NS)</option>
+            <option value="5% Dextrose in Water (D5W)">5% Dextrose in Water (D5W)</option>
+            <option value="Ringer's Lactate (RL)">Ringer's Lactate (RL)</option>
+            <option value="Dextrose Normal Saline (DNS)">Dextrose Normal Saline (DNS)</option>
+            <option value="0.45% Half-Normal Saline">0.45% Half-Normal Saline</option>
+            <option value="Custom Infusion Formulation">Custom Infusion Formulation</option>
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inp-saline-volume">Target Vol (mL)</label>
+            <input type="number" id="inp-saline-volume" placeholder="500" min="50" max="5000" value="500" oninput="triggerAiPrediction()" />
+          </div>
+          <div class="form-group">
+            <label for="inp-bed-no">Bed / Room</label>
+            <input type="text" id="inp-bed-no" placeholder="Bed 04-A" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-notes">Clinical Notes &amp; Flow Instructions</label>
+          <textarea id="inp-notes" rows="2" placeholder="Flow rate instructions, medication additives..."></textarea>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Infusion Session Controller -->
+    <div class="card" id="card-controls">
+      <div class="card-header">
+        <div class="card-header-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="10 8 16 12 10 16 10 8"></polygon>
+          </svg>
+        </div>
+        <div>
+          <h2>Session Controller</h2>
+          <span class="card-sub">Telemetry synchronization</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="session-btn-row">
+          <button id="btn-start" class="btn btn-start-session" onclick="sendStart()" disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>START INFUSION</span>
+          </button>
+          
+          <button id="btn-stop" class="btn btn-stop-session" onclick="sendStop()" disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+            </svg>
+            <span>PAUSE / STOP</span>
+          </button>
+        </div>
+
+        <!-- Complete Infusion & Generate Doctor Report Action -->
+        <div class="complete-btn-container mt-2">
+          <button id="btn-complete-session" class="btn btn-outline-success w-100" onclick="completeInfusionSession()" title="Mark Trip Completed & View Official Printable Doctor Report">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>🏁 Complete Trip &amp; Doctor Report</span>
+          </button>
+        </div>
+
+        <div class="session-status-panel">
+          <div class="status-metric-row">
+            <span class="status-metric-label">System State</span>
+            <span id="lbl-status" class="status-pill status-standby">STANDBY</span>
+          </div>
+          <div class="status-metric-row">
+            <span class="status-metric-label">Infusion Duration</span>
+            <span id="lbl-time" class="metric-mono">00:00:00</span>
+          </div>
+          <div class="status-metric-row">
+            <span class="status-metric-label">Administered Start</span>
+            <span id="lbl-started-at" class="metric-mono text-dim">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT HERO AREA: Real-time Telemetry Station & AI Clinical Intelligence ── -->
+  <section id="panel-infusion-monitor">
+
+    <!-- Active Prescription Badge (Shown during active session) -->
+    <div id="active-prescription-bar" class="active-prescription-bar hidden">
+      <div class="prescription-col">
+        <span class="p-label">ACTIVE PATIENT</span>
+        <span id="p-name" class="p-value">—</span>
+      </div>
+      <div class="prescription-col">
+        <span class="p-label">MRN / ID</span>
+        <span id="p-id" class="p-value mono">—</span>
+      </div>
+      <div class="prescription-col">
+        <span class="p-label">SOLUTION</span>
+        <span id="p-saline" class="p-value">—</span>
+      </div>
+      <div class="prescription-col">
+        <span class="p-label">AI PREDICTED FLOW</span>
+        <span id="p-ai-rate" class="p-value highlight">125 mL/hr (42 gtt/m)</span>
+      </div>
+      <div class="prescription-col">
+        <span class="p-label">ASSIGNED UNIT</span>
+        <span class="p-value highlight">IV Measurement Unit 1</span>
+      </div>
+    </div>
+
+    <!-- Main Infusion Telemetry Station Hero Card -->
+    <div class="card card-hero-monitor" id="card-hero-monitor">
+      <div class="card-header monitor-header">
+        <div class="monitor-title-group">
+          <div class="monitor-pulsing-badge"></div>
+          <div>
+            <h2 class="hero-title">Continuous Infusion Telemetry</h2>
+            <span class="card-sub">IV Measurement Unit 1 Transducer Stream</span>
+          </div>
+        </div>
+
+        <div class="monitor-header-right">
+          <!-- Quick calibration drawer trigger -->
+          <button class="btn btn-sm btn-ghost" onclick="openSettingsModal('calibration')" title="Enter Sensor Calibration & LCD Live Weight Mode">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            </svg>
+            <span>Sensor Calibration Mode</span>
+          </button>
+          <div class="level-digital-badge" id="level-badge">-- %</div>
+        </div>
+      </div>
+
+      <div class="card-body monitor-body">
+
+        <!-- Center Display: Realistic 3D Medical IV Infusion Bottle -->
+        <div class="monitor-center-stage">
+          <div class="iv-apparatus-wrapper">
+            <svg id="iv-svg" viewBox="0 0 240 370" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <!-- Safe Cyan Gradient -->
+                <linearGradient id="fluidGradSafe" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.98"/>
+                  <stop offset="45%" stop-color="#00bbf9" stop-opacity="0.94"/>
+                  <stop offset="100%" stop-color="#0077b6" stop-opacity="0.98"/>
+                </linearGradient>
+
+                <!-- Warning Amber Gradient -->
+                <linearGradient id="fluidGradWarn" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fee440" stop-opacity="0.98"/>
+                  <stop offset="100%" stop-color="#f77f00" stop-opacity="0.98"/>
+                </linearGradient>
+
+                <!-- Critical Red Gradient -->
+                <linearGradient id="fluidGradCrit" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ff0054" stop-opacity="0.98"/>
+                  <stop offset="100%" stop-color="#9e0059" stop-opacity="0.98"/>
+                </linearGradient>
+
+                <!-- Glass Body 3D Specular Highlight -->
+                <linearGradient id="glassReflectionL" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38"/>
+                  <stop offset="40%" stop-color="#ffffff" stop-opacity="0.12"/>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+                </linearGradient>
+
+                <linearGradient id="glassReflectionR" x1="100%" y1="0%" x2="0%" y2="0%">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+                </linearGradient>
+
+                <!-- 3D Bottle Contour Clip -->
+                <clipPath id="bottleContourClip">
+                  <path d="M 40 54 C 40 44, 200 44, 200 54 L 200 236 C 200 254, 155 264, 120 264 C 85 264, 40 254, 40 236 Z"/>
+                </clipPath>
+
+                <!-- Drip Chamber Clip -->
+                <clipPath id="chamberClip">
+                  <rect x="105" y="274" width="30" height="42" rx="4"/>
+                </clipPath>
+              </defs>
+
+              <!-- Stainless Steel Medical Hanger Hook & Ring -->
+              <path d="M 120 4 L 120 18 M 106 18 C 106 8, 134 8, 134 18 C 134 30, 106 30, 106 42 L 134 42" 
+                    fill="none" class="iv-hanger-steel" stroke-width="3.5" stroke-linecap="round"/>
+              <rect x="108" y="38" width="24" height="8" rx="3" class="iv-hanger-cap"/>
+
+              <!-- Outer Bottle 3D Contour Glass Shell -->
+              <path d="M 40 54 C 40 44, 200 44, 200 54 L 200 236 C 200 254, 155 264, 120 264 C 85 264, 40 254, 40 236 Z" 
+                    class="iv-bottle-shell" stroke-width="2.8" />
+
+              <!-- Fluid Volume Rectangle & Dynamic Wave -->
+              <g clip-path="url(#bottleContourClip)">
+                <rect id="fluid-rect" x="38" y="260" width="164" height="0" fill="url(#fluidGradSafe)"/>
+                <path id="fluid-wave" d="" fill="url(#fluidGradSafe)" opacity="0.8"/>
+              </g>
+
+              <!-- Left & Right Glass Highlights -->
+              <rect x="42" y="50" width="22" height="195" fill="url(#glassReflectionL)" clip-path="url(#bottleContourClip)" pointer-events="none"/>
+              <rect x="180" y="50" width="16" height="195" fill="url(#glassReflectionR)" clip-path="url(#bottleContourClip)" pointer-events="none"/>
+
+              <!-- Authentic Pharmaceutical Infusion Label Plate -->
+              <g class="iv-rx-label-plate" pointer-events="none">
+                <rect x="90" y="96" width="100" height="74" rx="4" class="iv-label-bg"/>
+                <text x="140" y="112" class="iv-label-heading" text-anchor="middle">SODIUM CHLORIDE</text>
+                <text x="140" y="124" class="iv-label-sub" text-anchor="middle">0.9% INJECTION USP</text>
+                <text x="140" y="140" class="iv-label-vol" text-anchor="middle">500 mL</text>
+                <text x="140" y="152" class="iv-label-sterile" text-anchor="middle">STERILE · NONPYROGENIC</text>
+                <line x1="98" y1="158" x2="182" y2="158" stroke="currentColor" stroke-opacity="0.3" stroke-width="0.8"/>
+                <text x="140" y="166" class="iv-label-unit" text-anchor="middle">IVMU-01 MONITORED</text>
+              </g>
+
+              <!-- High-Contrast Embossed Volumetric Graduation Scale -->
+              <g class="iv-grad-scale" pointer-events="none">
+                <!-- 100% / 500 mL -->
+                <line x1="42" y1="65" x2="68" y2="65" class="grad-tick" stroke-width="2.5"/>
+                <rect x="68" y="55" width="22" height="18" rx="3" class="grad-tag-bg"/>
+                <text x="79" y="68" class="grad-text-bold" text-anchor="middle">100</text>
+                
+                <!-- 75% / 375 mL -->
+                <line x1="42" y1="110" x2="65" y2="110" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="101" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="113" class="grad-text" text-anchor="middle">75%</text>
+
+                <!-- 50% / 250 mL -->
+                <line x1="42" y1="155" x2="65" y2="155" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="146" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="158" class="grad-text" text-anchor="middle">50%</text>
+
+                <!-- 25% / 125 mL -->
+                <line x1="42" y1="200" x2="65" y2="200" class="grad-tick" stroke-width="2.2"/>
+                <rect x="65" y="191" width="20" height="16" rx="3" class="grad-tag-bg"/>
+                <text x="75" y="203" class="grad-text" text-anchor="middle">25%</text>
+
+                <!-- 0% / CRITICAL EMPTY -->
+                <line x1="42" y1="245" x2="72" y2="245" stroke="#ff0054" stroke-width="3"/>
+                <rect x="72" y="235" width="46" height="18" rx="4" fill="#ff0054"/>
+                <text x="95" y="248" fill="#ffffff" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" text-anchor="middle">EMPTY</text>
+              </g>
+
+              <!-- Transparent Infusion Drip Chamber -->
+              <rect x="114" y="260" width="12" height="14" rx="2" class="drip-chamber-neck"/>
+              <rect x="105" y="274" width="30" height="42" rx="4" class="drip-chamber-glass" stroke-width="2"/>
+              
+              <!-- Drip Chamber Fluid Pool -->
+              <g clip-path="url(#chamberClip)">
+                <rect x="105" y="298" width="30" height="18" fill="url(#fluidGradSafe)" opacity="0.85"/>
+                <line x1="105" y1="298" x2="135" y2="298" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+              </g>
+
+              <!-- Infusion Drip Nozzle & Line Tubing -->
+              <line x1="120" y1="274" x2="120" y2="284" stroke="currentColor" stroke-width="2.5" opacity="0.7"/>
+              <line x1="120" y1="316" x2="120" y2="365" stroke="currentColor" opacity="0.3" stroke-width="5" stroke-linecap="round"/>
+              <line x1="120" y1="316" x2="120" y2="365" stroke="#00f5d4" stroke-width="2.2" stroke-dasharray="6 14" opacity="0.9" id="tubing-fluid-core"/>
+
+              <!-- Dynamic Fluid Droplet -->
+              <circle id="drip-drop" cx="120" cy="286" r="3.2" fill="#00f5d4" opacity="0"/>
+            </svg>
+          </div>
+
+          <!-- Telemetry Numerical Cards (Grid of Clinical Vitals) -->
+          <div class="monitor-vitals-column">
+
+            <!-- Net Mass Metric -->
+            <div class="vital-card">
+              <div class="vital-card-header">
+                <span class="vital-tag">TRANSDUCER MASS</span>
+                <span class="vital-channel">LOAD TRANSDUCER</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-val" id="stat-weight">0.0</span>
+                <span class="vital-unit">g</span>
+              </div>
+              <div class="vital-footer-bar">
+                <span>Net Reservoir Mass</span>
+                <span id="stat-weight-kg" class="mono text-dim">0.000 kg</span>
+              </div>
+            </div>
+
+            <!-- IV Level Percentage Metric -->
+            <div class="vital-card vital-card-highlight">
+              <div class="vital-card-header">
+                <span class="vital-tag">VOLUME LEVEL</span>
+                <span class="vital-channel" id="vital-level-status">NOMINAL</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-val" id="stat-level">0</span>
+                <span class="vital-unit">%</span>
+              </div>
+              <div class="vital-footer-bar">
+                <span>Computed Remaining Volume</span>
+                <span id="stat-volume-ml" class="mono text-highlight">-- mL</span>
+              </div>
+            </div>
+
+            <!-- Elapsed Session Time Metric -->
+            <div class="vital-card">
+              <div class="vital-card-header">
+                <span class="vital-tag">INFUSION DURATION</span>
+                <span class="vital-channel">ACTIVE SESSION</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-val metric-mono" id="stat-time-center">00:00:00</span>
+              </div>
+              <div class="vital-footer-bar">
+                <span>Telemetric Sync</span>
+                <span class="mono text-dim">9600 BAUD</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Continuous Level Progress Bar Barometer -->
+        <div class="level-progress-wrapper">
+          <div class="level-progress-labels">
+            <span class="text-danger">0% CRITICAL EMPTY</span>
+            <span class="text-warning">25% LOW RESERVE</span>
+            <span>50% NOMINAL</span>
+            <span>75%</span>
+            <span class="text-success">100% FULL</span>
+          </div>
+          <div class="level-bar-rail">
+            <div id="level-bar-fill" class="level-bar-indicator" style="width: 0%;"></div>
+          </div>
+        </div>
+
+
+
+      </div>
+    </div>
+
+    <!-- ══════════════════ GRAND AI CLINICAL INTELLIGENCE & FLOW RATE COCKPIT (RIGHT SIDE) ══════════════════ -->
+    <div class="card card-ai-glow card-ai-hero-wide" id="card-ai-prediction">
+      <div class="card-header ai-header-wide">
+        <div class="ai-header-left">
+          <div class="ai-badge-icon large">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.9 2-2 2h-4a2 2 0 0 1-2-2 4 4 0 0 1 4-4z"/>
+              <path d="M8 8v3a4 4 0 0 0 8 0V8"/>
+              <path d="M5 14h14"/>
+              <path d="M7 18h10"/>
+              <path d="M9 22h6"/>
+              <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ai-card-title-row">
+              <h2 class="ai-hero-title">AI Saline Flow Predictor &amp; Clinical Osmotherapy Intelligence</h2>
+              <span class="ai-neural-tag">HEURISTIC AI ENGINE</span>
+            </div>
+            <span class="card-sub">Automated Hemodynamic Drip Synchronization &amp; Infusion Risk Modeling</span>
+          </div>
+        </div>
+
+        <div class="ai-header-right">
+          <span class="ai-status-badge status-stable" id="ai-hemo-badge">STABLE EUVOLEMIC</span>
+        </div>
+      </div>
+
+      <div class="card-body ai-body-wide">
+        <!-- 3-Column Cockpit Layout -->
+        <div class="ai-hero-grid">
+          
+          <!-- Column 1: Grand Predictive Gauge Meter -->
+          <div class="ai-gauge-hero-box">
+            <div class="ai-gauge-box-title">PREDICTED TARGET FLOW RATE</div>
+            <div class="ai-gauge-container large">
+              <svg id="ai-flow-gauge-svg" viewBox="0 0 240 145" class="ai-gauge-svg-large">
+                <defs>
+                  <linearGradient id="aiGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#38bdf8"/>
+                    <stop offset="35%" stop-color="#00f5d4"/>
+                    <stop offset="70%" stop-color="#fbbf24"/>
+                    <stop offset="100%" stop-color="#f43f5e"/>
+                  </linearGradient>
+                  <filter id="gaugeGlowLarge" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3.5" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                  </filter>
+                </defs>
+
+                <!-- Semicircle Arc Background Track -->
+                <path d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" stroke-linecap="round" class="gauge-track"/>
+
+                <!-- Semicircle Colored Zone Arc -->
+                <path id="ai-gauge-colored-arc" d="M 30 120 A 90 90 0 0 1 210 120" fill="none" stroke="url(#aiGaugeGrad)" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+
+                <!-- Scale Labels -->
+                <text x="28" y="138" class="gauge-scale-label">50</text>
+                <text x="65" y="58" class="gauge-scale-label">75</text>
+                <text x="120" y="38" class="gauge-scale-label" text-anchor="middle">125</text>
+                <text x="175" y="58" class="gauge-scale-label">175</text>
+                <text x="212" y="138" class="gauge-scale-label" text-anchor="end">250+</text>
+
+                <!-- Needle Indicator -->
+                <g id="ai-gauge-needle-group" transform="rotate(-90 120 120)">
+                  <line x1="120" y1="120" x2="120" y2="44" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" filter="url(#gaugeGlowLarge)"/>
+                  <circle cx="120" cy="120" r="9" fill="#00f5d4" stroke="#0e1b30" stroke-width="2.5"/>
+                  <circle cx="120" cy="120" r="4" fill="#ffffff"/>
+                </g>
+
+                <!-- Center Readout -->
+                <text x="120" y="98" id="ai-gauge-value" class="gauge-center-val-large" text-anchor="middle">125</text>
+                <text x="120" y="112" class="gauge-center-unit-large" text-anchor="middle">mL / hr</text>
+              </svg>
+            </div>
+            <div class="ai-gauge-footer-tags">
+              <span class="gauge-footer-pill">🔵 &lt;75 Slow</span>
+              <span class="gauge-footer-pill active">🟢 125 Normal</span>
+              <span class="gauge-footer-pill">🟡 175 Hydration</span>
+              <span class="gauge-footer-pill">🔴 &gt;200 Bolus</span>
+            </div>
+          </div>
+
+          <!-- Column 2: 4 Large Biometrics & Calculated Parameters Tiles -->
+          <div class="ai-vitals-cockpit-grid">
+            <div class="ai-vital-tile">
+              <div class="a-tile-icon pulse-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <div class="a-tile-info">
+                <span class="a-tile-label">CARDIAC PULSE / HR</span>
+                <span class="a-tile-val" id="ai-disp-hr">76 bpm</span>
+                <span class="a-tile-sub">Input Biometric</span>
+              </div>
+            </div>
+
+            <div class="ai-vital-tile">
+              <div class="a-tile-icon bp-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <div class="a-tile-info">
+                <span class="a-tile-label">PERFUSION PRESSURE</span>
+                <span class="a-tile-val" id="ai-disp-bp">120/80</span>
+                <span class="a-tile-sub">Systolic / Diastolic</span>
+              </div>
+            </div>
+
+            <div class="ai-vital-tile highlight-tile">
+              <div class="a-tile-icon drip-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                </svg>
+              </div>
+              <div class="a-tile-info">
+                <span class="a-tile-label">CALCULATED DRIP RATE</span>
+                <span class="a-tile-val highlight" id="ai-disp-drip">42 gtt/m</span>
+                <span class="a-tile-sub">20 Drops / mL Set</span>
+              </div>
+            </div>
+
+            <div class="ai-vital-tile">
+              <div class="a-tile-icon time-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 14 10"></polyline>
+                </svg>
+              </div>
+              <div class="a-tile-info">
+                <span class="a-tile-label">EST. INFUSION SPAN</span>
+                <span class="a-tile-val" id="ai-disp-eta">4.0 hrs</span>
+                <span class="a-tile-sub">Full Volume Target</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: AI Clinical Overview & Protocol Actions -->
+          <div class="ai-summary-cockpit-box">
+            <div class="ai-summary-header">
+              <div class="ai-sparkle-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M12 0l2.5 7.5L22 10l-7.5 2.5L12 20l-2.5-7.5L2 10l7.5-2.5z"/>
+                </svg>
+              </div>
+              <span class="ai-summary-title">Clinical AI Assessment &amp; Osmotherapy Rationale</span>
+            </div>
+            
+            <p id="ai-overview-text" class="ai-overview-paragraph large-narrative">
+              Analyzing baseline vitals... Normal hemodynamic state detected. Recommended flow rate is calibrated at <strong>125 mL/hr</strong> with low fluid overload risk.
+            </p>
+
+            <div class="ai-action-cockpit-row">
+              <button class="btn btn-sm btn-ai-apply" onclick="applyAiFlowRateToNotes()" title="Insert AI Flow Rate recommendation into Infusion Notes">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Apply Rate to Infusion Notes</span>
+              </button>
+
+              <span class="ai-disclaimer-text">Continuous Clinical Decision Support</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ══════════════════ SYSTEM SETTINGS, CALIBRATION & DIAGNOSTICS MODAL ══════════════════ -->
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title-group">
+        <div class="modal-icon-badge">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">Device Configuration &amp; Telemetry Suite</h2>
+          <span class="modal-sub">IV Measurement Unit 1 — Sensor Calibration, Diagnostics &amp; Event Logs</span>
+        </div>
+      </div>
+
+      <button class="modal-close-btn" onclick="saveAndExitCalibration()" title="Save &amp; Return to Workstation">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Navigation Tabs -->
+    <div class="modal-tabs">
+      <button class="tab-btn active" onclick="switchSettingsTab('calibration', this)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        </svg>
+        <span>Transducer Calibration</span>
+      </button>
+      
+      <button class="tab-btn" onclick="switchSettingsTab('diagnostics', this)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 14 15 20 9"></polyline>
+          <polyline points="14 9 20 9 20 15"></polyline>
+        </svg>
+        <span>Telemetry Console</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchSettingsTab('logs', this)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>Clinical Event Logs</span>
+      </button>
+    </div>
+
+    <!-- Modal Content Body -->
+    <div class="modal-body">
+
+      <!-- ── TAB 1: SENSOR CALIBRATION ── -->
+      <div id="tab-pane-calibration" class="tab-pane active">
+        
+        <!-- Live Calibration Status Banner -->
+        <div class="cal-live-sync-banner">
+          <div class="cal-pulse-dot"></div>
+          <div>
+            <span class="cal-sync-title">Hardware LCD Synced to Live Weight Stream</span>
+            <span class="cal-sync-sub">The 16×2 physical LCD on IV Measurement Unit 1 is displaying real-time transducer grams.</span>
+          </div>
+        </div>
+
+        <!-- Auto-Calibration & Auto-Zero Feature Card -->
+        <div class="cal-card cal-card-auto-zero">
+          <div class="cal-auto-header">
+            <div class="d-flex align-center gap-2">
+              <div class="auto-badge-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </div>
+              <div>
+                <span class="cal-card-title">⚡ Automated Zero-Tare &amp; Calibration</span>
+                <span class="cal-help-text d-block">Starting auto-calibration immediately zeros/tares the transducer to 0.00g automatically.</span>
+              </div>
+            </div>
+            <span class="auto-zero-tag">AUTOMATED</span>
+          </div>
+
+          <div class="auto-cal-action-row">
+            <button class="btn btn-primary w-100" id="btn-auto-cal-start" onclick="startAutoCalibration()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Start Auto-Calibration (Auto-Zero 0.00 g)</span>
+            </button>
+          </div>
+          <div class="auto-zero-feedback" id="auto-zero-feedback">
+            <span class="feedback-dot"></span>
+            <span id="auto-zero-text">Auto-Zero baseline ready. Click above to trigger auto-tare on start.</span>
+          </div>
+        </div>
+
+        <div class="cal-dashboard-grid">
+          
+          <!-- Live Sensor Stream Header Card -->
+          <div class="cal-card cal-card-live">
+            <div class="cal-card-title">Live Sensor Stream (Unit 1 Transducer)</div>
+            <div class="live-sensor-value-box">
+              <div class="live-sensor-tag">LIVE TELEMETRY</div>
+              <div class="live-sensor-number" id="cal-live-weight">0.0 g</div>
+              <div class="live-sensor-sub">Transmitted in real-time to Physical LCD: <code>CALIBRATION MODE / WT: ...g</code></div>
+            </div>
+            <button class="btn btn-outline-warning w-100" id="btn-tare" onclick="sendTare()" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Tare Transducer to Zero (0.00 g)</span>
+            </button>
+          </div>
+
+          <!-- Calibration Reference Setup -->
+          <div class="cal-card">
+            <div class="cal-card-title">1. Full IV Bag Reference Mass</div>
+            <p class="cal-help-text">Mount a full IV saline reservoir onto Unit 1 and capture reference, or input known reference mass.</p>
+            
+            <button class="btn btn-secondary w-100 mb-2" id="btn-set-full" onclick="setFull()" disabled>
+              <span>▲ Capture Current Reading as FULL Bag</span>
+            </button>
+
+            <div class="input-btn-row">
+              <input type="number" id="inp-full-weight" value="500.0" placeholder="e.g. 500.0" />
+              <button class="btn btn-sm btn-primary" onclick="applyFullWeight()">Apply</button>
+            </div>
+            <div class="stored-cal-row">
+              <span>Active Full Ref:</span>
+              <span id="stored-full" class="metric-mono text-highlight">500.0 g</span>
+            </div>
+          </div>
+
+          <div class="cal-card">
+            <div class="cal-card-title">2. Empty Bag Reference Mass</div>
+            <p class="cal-help-text">Mount an empty saline bag &amp; hanger onto Unit 1, or input tare empty envelope weight.</p>
+
+            <button class="btn btn-secondary w-100 mb-2" id="btn-set-empty" onclick="setEmpty()" disabled>
+              <span>▼ Capture Current Reading as EMPTY Bag</span>
+            </button>
+
+            <div class="input-btn-row">
+              <input type="number" id="inp-empty-weight" value="50.0" placeholder="e.g. 50.0" />
+              <button class="btn btn-sm btn-primary" onclick="applyEmptyWeight()">Apply</button>
+            </div>
+            <div class="stored-cal-row">
+              <span>Active Empty Ref:</span>
+              <span id="stored-empty" class="metric-mono text-highlight">50.0 g</span>
+            </div>
+          </div>
+
+          <div class="cal-card">
+            <div class="cal-card-title">3. Transducer Scale Factor</div>
+            <p class="cal-help-text">Factory calibration multiplier for load transducer gain tuning (228.0 for 10kg load cell grams).</p>
+            <div class="input-btn-row">
+              <input type="number" id="inp-cal-factor" value="228" step="1" />
+              <button class="btn btn-sm btn-primary" onclick="applyCalFactor()">Update Gain</button>
+            </div>
+            <div class="stored-cal-row">
+              <span>Calibration Factor:</span>
+              <span id="stored-factor" class="metric-mono text-highlight">228.0</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Calibration Mode Footer Action -->
+        <div class="cal-footer-actions">
+          <button class="btn btn-primary btn-lg" onclick="saveAndExitCalibration()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Save Calibration &amp; Exit to Normal Telemetry Display</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ── TAB 2: DIAGNOSTICS & TELEMETRY CONSOLE ── -->
+      <div id="tab-pane-diagnostics" class="tab-pane">
+        <div class="diag-container">
+          <div class="diag-header-row">
+            <span class="diag-title">Raw Telemetry Data Stream (Port 9600 8-N-1)</span>
+            <button class="btn btn-xs btn-ghost" onclick="clearSerialConsole()">Clear Terminal</button>
+          </div>
+          <div id="serial-log" class="terminal-view"></div>
+          <div class="terminal-input-row">
+            <span class="terminal-prompt">&gt;</span>
+            <input type="text" id="serial-manual-input" placeholder="Execute device command (e.g. PING, CAL:TARE, CMD:START)..." />
+            <button class="btn btn-sm btn-primary" onclick="sendManualCmd()">Send Packet</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 3: CLINICAL EVENT LOGS ── -->
+      <div id="tab-pane-logs" class="tab-pane">
+        <div class="logs-container">
+          <div class="logs-header-row">
+            <span class="diag-title">Clinical Activity &amp; Audit Trail</span>
+            <div class="logs-actions">
+              <button class="btn btn-xs btn-secondary" onclick="exportLogs()">Export Audit Log</button>
+              <button class="btn btn-xs btn-ghost" onclick="clearLog()">Clear History</button>
+            </div>
+          </div>
+          <div id="event-log" class="event-log-view">
+            <div class="log-row log-info">
+              <span class="log-timestamp">—</span>
+              <span class="log-message">IV Sentry Pro Workstation initialized. Ready for device handshake.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DOCTOR'S PRINTABLE INFUSION COMPLETION REPORT MODAL ══════════════════ -->
+<div id="report-modal" class="modal-overlay hidden">
+  <div class="modal-dialog report-modal-dialog">
+    
+    <!-- Modal Navigation / Action Bar (Hidden on physical printout) -->
+    <div class="modal-header report-modal-header no-print">
+      <div class="modal-title-group">
+        <div class="modal-icon-badge doc-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="modal-title">Clinical Infusion Delivery Summary &amp; Doctor's Report</h2>
+          <span class="modal-sub">Official Medical Telemetry Record &middot; Verified by IV Sentry Pro&trade; Unit 1</span>
+        </div>
+      </div>
+
+      <div class="report-header-actions">
+        <button class="btn btn-primary btn-print" onclick="printDoctorReport()" title="Print Official Clinical Document (A4 / PDF)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span>Print Doctor Report (A4 / PDF)</span>
+        </button>
+        <button class="btn btn-secondary" onclick="copyReportSummary()" title="Copy Text Summary to Clipboard">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copy Summary</span>
+        </button>
+        <button class="modal-close-btn" onclick="closeDoctorReportModal()" title="Close Report">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Official Printable Document Container (Styled for Screen & Standard White A4 Print) -->
+    <div class="report-paper-container" id="printable-doctor-report">
+      <div class="report-sheet">
+        
+        <!-- Official Medical Center Letterhead -->
+        <header class="report-doc-header">
+          <div class="report-hospital-branding">
+            <div class="report-cross-logo">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 2v20M2 12h20"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="report-hospital-name">METROPOLITAN CLINICAL HEALTHCARE NETWORK</h1>
+              <div class="report-dept-name">Division of Intravenous Infusion Therapy, Pharmacokinetics &amp; Critical Care</div>
+              <div class="report-address-line">Medical Center Boulevard, Tower B &middot; Telemetry Station IVMU-01 &middot; ISO 13485 Certified</div>
+            </div>
+          </div>
+          <div class="report-doc-meta">
+            <div class="report-doc-badge">OFFICIAL CLINICAL RECORD</div>
+            <div class="report-meta-row">
+              <span class="meta-lbl">Report Ref:</span>
+              <span class="meta-val mono" id="rep-id">IVR-2026-8841</span>
+            </div>
+            <div class="report-meta-row">
+              <span class="meta-lbl">Date &amp; Time:</span>
+              <span class="meta-val" id="rep-timestamp">—</span>
+            </div>
+            <div class="report-meta-row">
+              <span class="meta-lbl">Acoustic Telemetry:</span>
+              <span class="meta-val">Pin D3 Piezo Buzzer Active</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="report-divider-heavy"></div>
+
+        <!-- Document Title -->
+        <div class="report-headline-block">
+          <h2 class="report-main-title">PATIENT INFUSION DISCHARGE &amp; DELIVERY TELEMETRY REPORT</h2>
+          <span class="report-subtitle">Comprehensive post-infusion delivery record, volumetric outcomes, hemodynamic status &amp; physician sign-off</span>
+        </div>
+
+        <!-- 1. Patient Demographics & Profile Table -->
+        <section class="report-section">
+          <div class="report-sec-header">
+            <span class="sec-num">1</span>
+            <h3 class="sec-title">Patient Profile &amp; Admission Demographics</h3>
+          </div>
+          <div class="report-grid-table">
+            <div class="rg-cell"><span class="rg-lbl">Patient Full Name:</span><span class="rg-val bold" id="rep-patient-name">—</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Patient MRN / ID:</span><span class="rg-val mono bold" id="rep-patient-id">—</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Patient Age:</span><span class="rg-val" id="rep-patient-age">— yrs</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Bed / Room Allocation:</span><span class="rg-val bold" id="rep-patient-bed">—</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Assigned Attender / Caregiver:</span><span class="rg-val" id="rep-patient-attender">—</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Admission Timestamp:</span><span class="rg-val mono" id="rep-admission-time">—</span></div>
+          </div>
+        </section>
+
+        <!-- 2. Patient Clinical Vitals & Hemodynamics -->
+        <section class="report-section">
+          <div class="report-sec-header">
+            <span class="sec-num">2</span>
+            <h3 class="sec-title">Clinical Vitals &amp; Hemodynamic State</h3>
+          </div>
+          <div class="vitals-report-grid">
+            <div class="vitals-box">
+              <span class="vbox-lbl">Heart Rate</span>
+              <span class="vbox-val" id="rep-vitals-hr">76 <span class="vbox-unit">bpm</span></span>
+              <span class="vbox-sub">Pulse Rhythm: Regular</span>
+            </div>
+            <div class="vitals-box">
+              <span class="vbox-lbl">Respiration Rate</span>
+              <span class="vbox-val" id="rep-vitals-rr">16 <span class="vbox-unit">bpm</span></span>
+              <span class="vbox-sub">Eupneic Baseline</span>
+            </div>
+            <div class="vitals-box">
+              <span class="vbox-lbl">Blood Pressure</span>
+              <span class="vbox-val" id="rep-vitals-bp">120/80 <span class="vbox-unit">mmHg</span></span>
+              <span class="vbox-sub">Normotensive Range</span>
+            </div>
+            <div class="vitals-box">
+              <span class="vbox-lbl">Hemodynamic Profile</span>
+              <span class="vbox-val-tag" id="rep-vitals-hemo">STABLE EUVOLEMIC</span>
+              <span class="vbox-sub">Risk Factor: Low (0%)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Infusion Prescription Parameters -->
+        <section class="report-section">
+          <div class="report-sec-header">
+            <span class="sec-num">3</span>
+            <h3 class="sec-title">Infusion Prescription &amp; Orders</h3>
+          </div>
+          <div class="report-grid-table">
+            <div class="rg-cell"><span class="rg-lbl">Prescribed Solution:</span><span class="rg-val bold highlight" id="rep-solution-type">—</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Target Reservoir Volume:</span><span class="rg-val bold mono" id="rep-target-volume">500 mL</span></div>
+            <div class="rg-cell"><span class="rg-lbl">AI Prescribed Flow Rate:</span><span class="rg-val mono" id="rep-ai-prescribed-flow">125 mL/hr (42 gtt/min)</span></div>
+            <div class="rg-cell"><span class="rg-lbl">Transducer Envelope:</span><span class="rg-val mono" id="rep-weight-envelope">Full: 500.0 g | Tare: 50.0 g</span></div>
+            <div class="rg-cell span-2"><span class="rg-lbl">Clinical Instructions &amp; Notes:</span><span class="rg-val italic" id="rep-clinical-notes">—</span></div>
+          </div>
+        </section>
+
+        <!-- 4. Actual Delivered Saline & Duration Metrics (DOCTOR'S WISH KEY SECTION) -->
+        <section class="report-section highlight-section">
+          <div class="report-sec-header">
+            <span class="sec-num">4</span>
+            <h3 class="sec-title">Actual Infusion Delivery Metrics &amp; Volumetric Outcome</h3>
+          </div>
+
+          <div class="delivery-hero-card">
+            <div class="delivery-stat-tile primary">
+              <span class="dstat-lbl">SALINE INJECTED / DELIVERED</span>
+              <div class="dstat-val-group">
+                <span class="dstat-val" id="rep-saline-injected">500.0</span>
+                <span class="dstat-unit">mL</span>
+              </div>
+              <span class="dstat-sub" id="rep-saline-mass">Net Mass: 500.0 g</span>
+            </div>
+
+            <div class="delivery-stat-tile">
+              <span class="dstat-lbl">TIME STARTED</span>
+              <span class="dstat-val-text mono" id="rep-time-started">—</span>
+              <span class="dstat-sub">Session Initiated</span>
+            </div>
+
+            <div class="delivery-stat-tile">
+              <span class="dstat-lbl">TIME ENDED / COMPLETED</span>
+              <span class="dstat-val-text mono" id="rep-time-ended">—</span>
+              <span class="dstat-sub">Session Concluded</span>
+            </div>
+
+            <div class="delivery-stat-tile highlight-green">
+              <span class="dstat-lbl">TIME TOOK TO INJECT (DURATION)</span>
+              <span class="dstat-val-text mono bold" id="rep-time-duration">00:00:00</span>
+              <span class="dstat-sub" id="rep-time-duration-text">Elapsed Injection Time</span>
+            </div>
+          </div>
+
+          <div class="delivery-sub-grid mt-3">
+            <div class="del-sub-cell">
+              <span class="dsc-lbl">Average Achieved Flow Rate:</span>
+              <span class="dsc-val mono bold" id="rep-actual-flow-rate">— mL/hr</span>
+            </div>
+            <div class="del-sub-cell">
+              <span class="dsc-lbl">Residual Uninjected Saline:</span>
+              <span class="dsc-val mono" id="rep-saline-residual">0.0 mL (0.0 g)</span>
+            </div>
+            <div class="del-sub-cell">
+              <span class="dsc-lbl">Delivery Completion Ratio:</span>
+              <span class="dsc-val bold text-success" id="rep-completion-pct">100.0% Complete</span>
+            </div>
+            <div class="del-sub-cell">
+              <span class="dsc-lbl">Final Trip Outcome:</span>
+              <span class="dsc-val bold text-success" id="rep-trip-outcome">COMPLETED (Full Prescription Administered)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Pin D3 Buzzer Milestone Acoustic Audit Log -->
+        <section class="report-section">
+          <div class="report-sec-header">
+            <span class="sec-num">5</span>
+            <h3 class="sec-title">Pin D3 Buzzer Milestone Audit Log (Order Followed)</h3>
+          </div>
+          <div class="buzzer-audit-table-wrap">
+            <table class="buzzer-audit-table">
+              <thead>
+                <tr>
+                  <th>Milestone Threshold</th>
+                  <th>Hardware Pin</th>
+                  <th>Acoustic Signal</th>
+                  <th>Trigger Time</th>
+                  <th>Delivery Status</th>
+                </tr>
+              </thead>
+              <tbody id="rep-buzzer-tbody">
+                <tr><td>90% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-90">—</td><td><span class="badge-audit" id="rep-bstat-90">Pending</span></td></tr>
+                <tr><td>75% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-75">—</td><td><span class="badge-audit" id="rep-bstat-75">Pending</span></td></tr>
+                <tr><td>65% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-65">—</td><td><span class="badge-audit" id="rep-bstat-65">Pending</span></td></tr>
+                <tr><td>50% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-50">—</td><td><span class="badge-audit" id="rep-bstat-50">Pending</span></td></tr>
+                <tr><td>35% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-35">—</td><td><span class="badge-audit" id="rep-bstat-35">Pending</span></td></tr>
+                <tr><td>25% Volume Level</td><td>Pin D3</td><td>Single Beep (1x)</td><td id="rep-btime-25">—</td><td><span class="badge-audit" id="rep-bstat-25">Pending</span></td></tr>
+                <tr class="audit-crit-row"><td>&lt; 10% Critical Reserve</td><td>Pin D3</td><td>5 Rapid Beeps (5x)</td><td id="rep-btime-10">—</td><td><span class="badge-audit alert" id="rep-bstat-10">Pending</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 6. Formal Doctor's Wish Sign-off Block -->
+        <section class="report-section signoff-section">
+          <div class="report-sec-header">
+            <span class="sec-num">6</span>
+            <h3 class="sec-title">Physician Clinical Evaluation &amp; Formal Authorization</h3>
+          </div>
+          
+          <div class="doc-eval-box">
+            <span class="eval-lbl">Physician Clinical Assessment / Discharge Notes:</span>
+            <div class="eval-text-placeholder">
+              Fluid administration tolerated well by patient. Continuous D3 acoustic telemetry maintained throughout infusion session. Target dosage achieved within prescribed hemodynamic envelope. Patient cleared for transition to oral hydration / step-down care.
+            </div>
+          </div>
+
+          <div class="signatures-grid mt-4">
+            <div class="sig-block">
+              <div class="sig-line"></div>
+              <span class="sig-title">Attending Physician (M.D.) Signature</span>
+              <span class="sig-sub">Print Name: Dr. ___________________________, M.D.</span>
+              <span class="sig-sub">License #: __________________ &middot; Date: _____________</span>
+            </div>
+
+            <div class="sig-block">
+              <div class="sig-line"></div>
+              <span class="sig-title">Assigned Infusion Nurse / Attender Verification</span>
+              <span class="sig-sub">Print Name: ___________________________, RN</span>
+              <span class="sig-sub">Staff ID: ____________________ &middot; Date: _____________</span>
+            </div>
+          </div>
+
+          <footer class="report-footer-fineprint mt-4">
+            <span>This electronic infusion summary was generated automatically by IV Sentry Pro&trade; Clinical Telemetry Workstation (ATmega328P / HX711 Load Transducer / D3 Acoustic Subsystem). Relays disengaged. Document valid when signed by licensed medical staff.</span>
+          </footer>
+        </section>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════ WORKSTATION LOGIC & TELEMETRY ══════════════════ -->
+<script src="app.js"></script>
+</body>
+</html>

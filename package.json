@@ -1,0 +1,12 @@
+{
+  "name": "iv-sentry-pro",
+  "version": "2.5.0",
+  "description": "IV Sentry Pro Clinical Infusion Telemetry Workstation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["telemetry", "clinical", "infusion", "medical"],
+  "author": "",
+  "license": "ISC"
+}
