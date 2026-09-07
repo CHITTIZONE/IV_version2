@@ -462,14 +462,9 @@ function parseTelemetryLine(line) {
       computeRemainingVolume();
       checkBuzzerMilestones(state.level);
 
-      // Critical threshold (< 10%): Stop timer, sound 10s alarm, place warning popup, generate complete report
+      // Critical threshold (< 10%): Stop timer, show warning popup for 5s, auto-mute alarm & open Doctor Report
       if (state.level < 10 && state.status === 'INFUSING') {
-        stopLocalTimer();
-        triggerAlarmUI('empty');
-        if (!state.tripCompleted) {
-          completeInfusionSession(false);
-        }
-        playBuzzerBeeps(25, 2800, 250, 150); // 10 seconds of emergency acoustic alert beeps
+        handleCriticalEmptyAlarm();
       } else if (state.level >= 10 && state.alarmActive) {
         resolveAlarm();
       }
@@ -579,13 +574,7 @@ function parseTelemetryLine(line) {
 
   // CRITICAL RESERVOIR DEPLETION (< 10%)
   if (line.startsWith('EVENT:CRITICAL_EMPTY') || line.startsWith('BUZZER:EVENT:10')) {
-    stopLocalTimer();
-    triggerAlarmUI('empty');
-    if (!state.tripCompleted) {
-      completeInfusionSession(false);
-    }
-    playBuzzerBeeps(25, 2800, 250, 150); // 10 seconds of emergency acoustic alert beeps
-    logEvent('🚨 CRITICAL EMPTY ALARM: Fluid dropped below 10%. Timer stopped, 10s buzzer sounded, and Doctor Report prepared.', 'error');
+    handleCriticalEmptyAlarm();
     return;
   }
 
@@ -805,6 +794,27 @@ function showActivePrescriptionBar() {
   bar.classList.remove('hidden');
 }
 
+// ── Critical Alarm Automation (5-second Warning Popup -> Auto-Mute -> Doctor Report) ──
+let criticalAlarmTimer = null;
+
+function handleCriticalEmptyAlarm() {
+  stopLocalTimer();
+  triggerAlarmUI('empty');
+  if (!state.tripCompleted) {
+    completeInfusionSession(false);
+  }
+
+  // Play 5 seconds of acoustic alert beeps (12 beeps x ~400ms = ~5 sec)
+  playBuzzerBeeps(12, 2800, 250, 150);
+  logEvent('🚨 CRITICAL ALARM (<10%): Displaying warning popup for 5s, auto-muting alarm, and opening Doctor Report.', 'error');
+
+  if (criticalAlarmTimer) clearTimeout(criticalAlarmTimer);
+  criticalAlarmTimer = setTimeout(() => {
+    acknowledgeAlarm();
+    openDoctorReportModal(false);
+  }, 5000);
+}
+
 // ── Clinical Alarm System ─────────────────────────────────────────────────────
 function triggerAlarmUI(type) {
   if (type === 'empty' && !state.alarmActive) {
@@ -827,12 +837,16 @@ function triggerAlarmUI(type) {
 }
 
 function acknowledgeAlarm() {
+  if (criticalAlarmTimer) {
+    clearTimeout(criticalAlarmTimer);
+    criticalAlarmTimer = null;
+  }
   state.alarmActive = false;
   const overlay = document.getElementById('alarm-overlay');
   if (overlay) overlay.classList.add('hidden');
   stopAlarmAudio();
   sendCmd('CMD:ACK_ALARM');
-  logEvent('Clinical alarm acknowledged & muted by operator.', 'info');
+  logEvent('Clinical alarm acknowledged & muted.', 'info');
 }
 
 function resolveAlarm() {
@@ -1597,6 +1611,10 @@ async function completeInfusionSession(fromUser = true) {
 }
 
 function openDoctorReportModal(autoDownload = false) {
+  if (criticalAlarmTimer) {
+    clearTimeout(criticalAlarmTimer);
+    criticalAlarmTimer = null;
+  }
   acknowledgeAlarm(); // Mute alarm and dismiss warning overlay so report modal is visible
   if (!state.tripCompleted) {
     completeInfusionSession(false);

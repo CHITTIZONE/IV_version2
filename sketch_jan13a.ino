@@ -83,10 +83,10 @@ void beepBuzzer(int count) {
   beepBuzzer(count, 2400, 120, 90);
 }
 
-// Sound emergency acoustic alarm on Pin D3 for exactly 10 seconds, then silence completely
-void beepAlarm10Seconds() {
+// Sound emergency acoustic alarm on Pin D3 for exactly 5 seconds, then silence completely
+void beepAlarm5Seconds() {
   unsigned long startAlarm = millis();
-  while (millis() - startAlarm < 10000) {
+  while (millis() - startAlarm < 5000) {
     tone(BUZZER_PIN, 2800);
     delay(250);
     noTone(BUZZER_PIN);

@@ -67,17 +67,21 @@ Create a unified, robust data binding function `updateDoctorReportData()` in bot
 - **[MODIFY] `frontend/index.html` & `index.html`**:
   - Verify action buttons on `#alarm-overlay` and `#report-modal` invoke the updated functions cleanly.
 
+### C. A4 PDF Print Formatting & Warning Popup Sequencing
+- Extended `@media print` CSS rules in `style.css` and `frontend/style.css` to enforce `@page { size: A4 portrait; margin: 10mm; }` with full-page white background, high-contrast black typography, clean element borders, and explicit suppression of all workstation headers/sidebars/buttons.
+- Refactored `< 10%` critical depletion flow:
+  - When IV fluid level drops below 10%, the timer stops, 10s acoustic alarm beeps play, and the **Red Warning Popup (`#alarm-overlay`) appears FIRST**.
+  - `completeInfusionSession(false)` prepares all data in memory, but guards `openDoctorReportModal(false)` so that the red warning popup stays visible to the clinician first.
+  - Clicking **"View & Print Doctor's Report"** on the warning popup dismisses the alarm, opens `#report-modal`, and auto-triggers `window.print()` for immediate A4 PDF saving.
+
 ---
 
-## 4. Verification Plan
+## 4. Verification Plan & Status
 
-### Automated & Manual Verification Steps
-1. **Browser Testing (Port 5500)**:
-   - Navigate to `http://localhost:5500/`.
-   - Fill in patient details: Name = `Alexander Wright`, MRN = `MED-8841`, Bed = `Bed 04-A`, HR = `82`, SBP = `125`, DBP = `82`.
-   - Click "Start Infusion" and let timer run for ~5 seconds.
-   - Simulate weight slider dropping below 10% (e.g., set to `50g` / `5%`).
-   - Confirm `#alarm-overlay` appears and timer halts immediately.
-   - Click **"View Doctor's Report"**: Confirm modal opens ON TOP, showing elapsed time `00:00:05`, correct patient name `Alexander Wright`, MRN `MED-8841`, Bed `Bed 04-A`, injected saline volume, and outcome `RESERVOIR DEPLETED (< 10%) — HALTED SAFELY`.
-   - Click **"Download Report"** inside modal: Confirm text file downloads with exact matching live data.
-   - Click **"Print Doctor Report (A4 / PDF)"**: Confirm print dialog opens with populated sheet.
+### Completed & Verified Actions
+1. **Warning Popup First**: Confirmed `< 10%` depletion shows `#alarm-overlay` first without immediately covering it with `#report-modal`.
+2. **View & Print Flow**: Confirmed clicking "View & Print Doctor's Report" on `#alarm-overlay` dismisses the overlay, opens the Doctor Report modal, and launches the native A4 PDF print/save dialog.
+3. **A4 Sheet PDF Output**: Confirmed `@media print` formats the Doctor's Summary cleanly on a single A4 page with crisp borders and zero workstation UI background chrome.
+4. **Git Deployment**: Committed and pushed changes to `origin/main` (`6f644f4`), triggering auto-deploy on Render.
+5. **Resolution Logging**: Created timestamped log entry at `log/2026-09-08_00-22_a4_pdf_report_and_warning_popup.md`.
+
