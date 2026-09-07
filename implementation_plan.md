@@ -67,22 +67,23 @@ Create a unified, robust data binding function `updateDoctorReportData()` in bot
 - **[MODIFY] `frontend/index.html` & `index.html`**:
   - Verify action buttons on `#alarm-overlay` and `#report-modal` invoke the updated functions cleanly.
 
-### C. A4 PDF Print Formatting & 5-Second Warning Popup Sequence
-- Extended `@media print` CSS rules in `style.css` and `frontend/style.css` to enforce `@page { size: A4 portrait; margin: 10mm; }` with full-page white background, high-contrast black typography, clean element borders, and explicit suppression of all workstation headers/sidebars/buttons.
-- **Frontend 5-Second Warning Popup Automation**:
-  - When IV fluid level drops below 10%, the timer stops, 5-second acoustic alarm beeps play, and the **Red Warning Popup (`#alarm-overlay`) appears FIRST**.
-  - `handleCriticalEmptyAlarm()` schedules a **5-second timer** (`5000ms`).
-  - After 5 seconds, the alarm is automatically **muted** (`acknowledgeAlarm()`), the warning popup is dismissed, and the Doctor's Report modal (`#report-modal`) is automatically **opened and hydrated** in proper format.
+### C. 2-Column Milestone Audit Log & Single-Page A4 Sheet Fit
+- **Section 5 Table Simplification**: Removed `Hardware Pin`, `Acoustic Signal`, and `Delivery Status` columns. Retained ONLY `Milestone Threshold` and `Trigger Time` columns across all 7 volume thresholds (`90%`, `75%`, `65%`, `50%`, `35%`, `25%`, `< 10%`).
+- **Single-Page A4 Sheet Print Engine**:
+  - Updated `@media print` in `style.css` and `frontend/style.css` (`@page { size: A4 portrait; margin: 6mm 8mm; }`).
+  - Adjusted font scale (`9.5pt`), line-heights (`1.35`), section margins (`8px`), and table padding so that all 6 sections plus formal physician sign-off fit on **1 SINGLE A4 PAGE**.
+- **Offline Report Generation**: Ensured dynamic report hydration works fully in offline simulation mode without needing an active hardware serial connection.
 
 ---
 
 ## 4. Verification Plan & Status
 
 ### Completed & Verified Actions
-1. **Frontend 5s Warning Popup**: Confirmed `< 10%` depletion shows `#alarm-overlay` for 5 seconds with alert audio.
-2. **Auto-Mute & Doctor Report**: Confirmed after 5 seconds, the alarm mutes automatically, `#alarm-overlay` closes, and `#report-modal` displays the populated report in clean A4 format.
-3. **A4 Sheet PDF Output**: Confirmed `@media print` formats the Doctor's Summary cleanly on a single A4 page with crisp borders and zero workstation UI background chrome.
-4. **Git Deployment**: Committed and pushed changes to `origin/main` (`b099b5d`), triggering auto-deploy on Render.
-5. **Resolution Logging**: Created timestamped log entry at `log/2026-09-08_00-27_frontend_5s_warning_popup_automute_report.md`.
+1. **Simplified 2-Column Table**: Confirmed Section 5 displays only `Milestone Threshold` and `Trigger Time`.
+2. **Single-Page A4 Fit**: Confirmed `@media print` renders the full Doctor's Report on a single A4 page with crisp borders and no page overflow.
+3. **Offline Telemetry Hydration**: Confirmed report populates live demographics, vitals, durations, and milestone trigger times in web simulation mode.
+4. **Git Deployment**: Committed and pushed changes to `origin/main` (`88e0d94`), triggering auto-deploy on Render.
+5. **Resolution Logging**: Created timestamped log entry at `log/2026-09-08_00-42_2column_milestone_audit_table_and_1page_a4_fit.md`.
+
 
 
