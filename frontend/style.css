@@ -3146,17 +3146,17 @@ textarea {
   line-height: 1.4;
 }
 
-/* ══════════════════ OFFICIAL PRINT STYLESHEET (@media print) ══════════════════ */
+/* ══════════════════ OFFICIAL PRINT STYLESHEET (@media print - 1 PAGE A4 FIT) ══════════════════ */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 6mm 8mm;
   }
 
   html, body {
     background: #ffffff !important;
     color: #0f172a !important;
-    font-size: 11pt !important;
+    font-size: 9.5pt !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
@@ -3188,6 +3188,7 @@ textarea {
     max-width: 100% !important;
     width: 100% !important;
     max-height: none !important;
+    height: auto !important;
     box-shadow: none !important;
     border: none !important;
     background: transparent !important;
@@ -3207,27 +3208,85 @@ textarea {
     max-width: 100% !important;
     background: #ffffff !important;
     color: #0f172a !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  .report-doc-header {
+    margin-bottom: 6px !important;
+  }
+
+  .report-divider-heavy {
+    margin: 6px 0 8px 0 !important;
+    height: 2px !important;
+  }
+
+  .report-headline-block {
+    margin-bottom: 8px !important;
+  }
+
+  .report-main-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 2px !important;
   }
 
   .report-section {
-    border: 1pt solid #94a3b8 !important;
+    margin-bottom: 8px !important;
+    border: 1pt solid #cbd5e1 !important;
     page-break-inside: avoid;
   }
 
-  .report-section.highlight-section {
-    border: 1.5pt solid #0284c7 !important;
-  }
-
   .report-sec-header {
+    padding: 4px 8px !important;
     background: #f1f5f9 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  .sec-num {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 0.65rem !important;
+  }
+
+  .sec-title {
+    font-size: 0.8rem !important;
+  }
+
+  .report-grid-table {
+    padding: 4px 8px !important;
+    gap: 3px 12px !important;
+  }
+
+  .rg-cell {
+    padding: 2px 0 !important;
+    font-size: 0.75rem !important;
+  }
+
+  .vitals-report-grid {
+    padding: 6px 8px !important;
+    gap: 8px !important;
+  }
+
+  .vitals-box {
+    padding: 4px 6px !important;
+  }
+
+  .vbox-val {
+    font-size: 1rem !important;
+    margin: 2px 0 !important;
+  }
+
   .delivery-hero-card {
+    padding: 6px 8px !important;
+    gap: 8px !important;
     background: #f8fafc !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  .delivery-stat-tile {
+    padding: 6px 8px !important;
   }
 
   .delivery-stat-tile.primary {
@@ -3242,14 +3301,69 @@ textarea {
     print-color-adjust: exact !important;
   }
 
+  .dstat-val {
+    font-size: 1.3rem !important;
+  }
+
+  .delivery-sub-grid {
+    padding: 4px 8px !important;
+    gap: 2px 12px !important;
+  }
+
+  .del-sub-cell {
+    padding: 2px 0 !important;
+    font-size: 0.75rem !important;
+  }
+
+  .buzzer-audit-table-wrap {
+    padding: 4px 8px !important;
+  }
+
+  .buzzer-audit-table th, .buzzer-audit-table td {
+    padding: 3px 6px !important;
+    font-size: 0.72rem !important;
+  }
+
   .buzzer-audit-table th {
     background: #e2e8f0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  .doc-eval-box {
+    padding: 6px 8px !important;
+  }
+
+  .eval-text-placeholder {
+    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .signatures-grid {
+    padding: 6px 12px 2px 12px !important;
+    gap: 20px !important;
+    margin-top: 4px !important;
+  }
+
   .sig-line {
+    height: 22px !important;
+    margin-bottom: 2px !important;
     border-bottom: 1.5pt solid #000000 !important;
+  }
+
+  .sig-title {
+    font-size: 0.75rem !important;
+  }
+
+  .sig-sub {
+    font-size: 0.68rem !important;
+  }
+
+  .report-footer-fineprint {
+    padding: 4px 8px !important;
+    font-size: 0.6rem !important;
+    margin-top: 4px !important;
   }
 }
 

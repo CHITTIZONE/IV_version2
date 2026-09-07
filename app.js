@@ -1685,6 +1685,12 @@ function downloadDoctorReportText() {
   const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'MED-8841';
   const repRef = document.getElementById('rep-id')?.textContent || `IVR-${pId}`;
   const nowStr = new Date().toLocaleString();
+  
+  const milestoneLines = [90, 75, 65, 50, 35, 25, 10].map(pct => {
+    const label = (pct === 10) ? '< 10% Critical Reserve' : `${pct}% Volume Level`;
+    const time = document.getElementById(`rep-btime-${pct}`)?.textContent || '—';
+    return `  ${label.padEnd(25)} : ${time}`;
+  }).join('\n');
 
   const textContent = `===============================================================
 IV SENTRY PRO™ — CLINICAL INFUSION DELIVERY & AUDIT REPORT
@@ -1719,7 +1725,13 @@ Elapsed Time   : ${document.getElementById('rep-time-duration')?.textContent || 
 Avg Flow Rate  : ${document.getElementById('rep-actual-flow-rate')?.textContent || '—'}
 Status/Outcome : ${document.getElementById('rep-trip-outcome')?.textContent || '—'}
 
-4. CLINICAL NOTES & INSTRUCTIONS
+4. VOLUME LEVEL MILESTONE AUDIT LOG
+---------------------------------------------------------------
+Milestone Threshold         Trigger Time
+---------------------------------------------------------------
+${milestoneLines}
+
+5. CLINICAL NOTES & INSTRUCTIONS
 ---------------------------------------------------------------
 ${document.getElementById('rep-clinical-notes')?.textContent || 'None recorded.'}
 
