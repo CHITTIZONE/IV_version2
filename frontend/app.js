@@ -1201,6 +1201,17 @@ function applyAiFlowRateToNotes() {
     notesEl.value = (notesEl.value ? notesEl.value.trim() + '\n' : '') + entry;
   }
   logEvent(`AI flow recommendation (${p.flowRate} mL/hr) applied to clinical notes.`, 'info');
+
+  const btn = document.querySelector('.btn-ai-apply');
+  if (btn && !btn.classList.contains('applied')) {
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>Applied to Infusion Notes!</span>`;
+    btn.classList.add('applied');
+    setTimeout(() => {
+      btn.innerHTML = originalHtml;
+      btn.classList.remove('applied');
+    }, 2000);
+  }
 }
 
 // ── Initialization ────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2.5" />
 </head>
 <body>
 
@@ -736,14 +736,17 @@
             </p>
 
             <div class="ai-action-cockpit-row">
-              <button class="btn btn-sm btn-ai-apply" onclick="applyAiFlowRateToNotes()" title="Insert AI Flow Rate recommendation into Infusion Notes">
+              <button type="button" class="btn btn-ai-apply" onclick="applyAiFlowRateToNotes()" title="Insert AI Flow Rate recommendation into Infusion Notes">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
                 <span>Apply Rate to Infusion Notes</span>
               </button>
 
-              <span class="ai-disclaimer-text">Continuous Clinical Decision Support</span>
+              <div class="ai-disclaimer-badge">
+                <span class="pulse-dot"></span>
+                <span>Continuous Clinical Decision Support</span>
+              </div>
             </div>
           </div>
 
@@ -1256,6 +1259,6 @@
 </div>
 
 <!-- ══════════════════ WORKSTATION LOGIC & TELEMETRY ══════════════════ -->
-<script src="app.js"></script>
+<script src="app.js?v=2.5"></script>
 </body>
 </html>
