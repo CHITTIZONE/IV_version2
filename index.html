@@ -127,18 +127,35 @@
       </div>
       <div>
         <h2 class="alarm-title">CRITICAL INFUSION ALERT</h2>
-        <div class="alarm-subtitle">Saline reservoir depleted — Immediate bag replacement required</div>
+        <div class="alarm-subtitle">Saline reservoir below 10% — Infusion Halted Safely &amp; Doctor Report Ready</div>
       </div>
     </div>
     <div class="alarm-patient-card" id="alarm-patient-info">
       Patient: — | ID: —
     </div>
     <div class="alarm-actions">
-      <button class="btn btn-alarm-ack" onclick="acknowledgeAlarm()">
+      <button class="btn btn-primary btn-alarm-view-report" onclick="acknowledgeAlarm(); openDoctorReportModal();" title="View Full Doctor's Report">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>View Doctor's Report</span>
+      </button>
+      <button class="btn btn-secondary btn-alarm-download" onclick="downloadDoctorReportText()" title="Download Text Audit File">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Download (.txt)</span>
+      </button>
+      <button class="btn btn-alarm-ack" onclick="acknowledgeAlarm()" title="Mute Alarm Sound">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
-        <span>Mute &amp; Acknowledge Alarm</span>
+        <span>Mute Alarm</span>
       </button>
     </div>
   </div>
@@ -1011,6 +1028,14 @@
           </svg>
           <span>Print Doctor Report (A4 / PDF)</span>
         </button>
+        <button class="btn btn-secondary" onclick="downloadDoctorReportText()" title="Download Full Clinical Audit Report as Text File">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Download Report</span>
+        </button>
         <button class="btn btn-secondary" onclick="copyReportSummary()" title="Copy Text Summary to Clipboard">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1259,6 +1284,6 @@
 </div>
 
 <!-- ══════════════════ WORKSTATION LOGIC & TELEMETRY ══════════════════ -->
-<script src="app.js?v=2.5"></script>
+<script src="app.js?v=2.6"></script>
 </body>
 </html>

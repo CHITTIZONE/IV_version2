@@ -1,75 +1,77 @@
-# Implementation Plan — Streamlined IV SENTRY PRO™ Telemetry Workstation
+# Implementation Plan — Critical <10% Fluid Threshold, 5s Buzzer Alarm & Doctor Report Generation
 
 **System:** IV SENTRY PRO™ Clinical Infusion Telemetry Workstation  
-**Hardware Controller:** Arduino Uno / Nano + HX711 Load Cell + Pin D3 Buzzer  
-**Current Status:** Master Engineering Documentation (`README.md`) Complete | Dual Root/Frontend Assets Mirrored | Local Daemon Port 5500  
-**Last Updated:** 2026-09-07 21:46:40 (IST)
+**Hardware Controller:** Arduino Uno / Nano + HX711 Load Cell + Pin D3 Acoustic Buzzer + 16x2 I2C LCD  
+**Current Status:** Critical <10% Automation & Complete Doctor's Report (View & Download) Implementation  
+**Last Updated:** 2026-09-07 23:45:00 (IST)
 
 ---
 
-## 1. Master Documentation & System Description (`README.md`)
-
-1. **Problem**: The project lacked a single, authoritative engineering document detailing the full system architecture, circuit wiring, telemetry protocols, AI algorithms, and deployment workflows.
-2. **Resolution Applied**:
-   - Created comprehensive [`README.md`](file:///f:/PROJECT/IV_version2/README.md) in workspace root and mirrored in [`frontend/README.md`](file:///f:/PROJECT/IV_version2/frontend/README.md).
-   - Documented complete hardware BOM, pinout mapping table (HX711 DOUT:D6/SCK:D7, Buzzer:D3, Buttons:D11/D12, I2C:A4/A5).
-   - Documented firmware execution lifecycle, timer stop behavior, and descending milestone alerts (90% to 0%).
-   - Documented bi-directional UART protocol (9600 baud), AI osmotherapy engine, and Doctor Report PDF printing.
-
----
-
-## 2. Clinical AI Assessment Widget Realignment
-
-1. **Problem**: In `.ai-summary-cockpit-box`, the button `[ ✓ Apply Rate to Infusion Notes ]` and the badge `Continuous Clinical Decision Support` collided horizontally and overflowed card borders.
-2. **Resolution Applied**:
-   - Refactored `.ai-action-cockpit-row` to stack vertically with dedicated gap spacing (`gap: 10px`).
-   - Styled `.btn-ai-apply` with purple glassmorphism gradient, glowing hover states, and responsive centering.
-   - Styled `.ai-disclaimer-badge` below the button with uppercase tracked font and an emerald pulsing indicator beacon (`.pulse-dot`).
-   - Enhanced `applyAiFlowRateToNotes()` in `app.js` with interactive applied feedback (`✓ Applied to Infusion Notes!`).
-
----
-
-## 3. Render Hosting Asset Resolution
-
-1. **Problem**: CSS failed to render on Render due to Publish Directory pointing to root while assets were previously located only in `frontend/`.
-2. **Dual-Path Resolution**:
-   - Assets mirrored in both root `./` and `./frontend`:
-     - `index.html`
-     - `style.css`
-     - `app.js`
-     - `README.md`
-   - Works regardless of whether Render Publish Directory is set to `.` or `frontend`.
-3. **Web Service Fallback**:
-   - Added `server.js` and `package.json` to handle cases where the project is deployed as a Render **Web Service** instead of a **Static Site**.
+## 1. Problem Overview & Requirements
+When the IV fluid level drops below 10% (`< 10%`):
+1. **Stop the Timer Immediately**:
+   - Hardware: Lock `elapsedTime = millis() - startTime` and set `timerRunning = false`.
+   - Web App: Call `stopLocalTimer()` to halt the local stopwatch interval, freeze `#stat-time-center` and `#lbl-time` without drift.
+2. **Sound Buzzer for Exactly 5 Seconds**:
+   - Hardware: Execute `beepAlarm5Seconds()` (rapid 2800 Hz alert pulses for 5000ms), followed by `noTone(BUZZER_PIN); digitalWrite(BUZZER_PIN, LOW);` to ensure the buzzer completely silences after 5 seconds.
+   - Web App: Synthesize 5 seconds of audio alert via Web Audio API (`playBuzzerBeeps(12, 2800, 250, 160)`).
+3. **Place the Warning Popup**:
+   - Display `#alarm-overlay` with critical alert messaging: "CRITICAL INFUSION ALERT — Saline reservoir below 10%! Infusion Halted & Doctor Report Generated."
+   - Provide "View & Download Doctor's Report" action button + "Mute Alarm" button.
+4. **Generate the Complete Report to User in View and Download Manner**:
+   - Compile clinical vitals, patient demographics, infused saline volume (mL), residual volume, injection duration, actual flow rate, AI osmotherapy prescription, and D3 buzzer milestone audit table.
+   - Open `#report-modal` so the user can immediately **VIEW** the complete official report on screen.
+   - Provide multiple **DOWNLOAD** options:
+     - **Print Doctor Report (A4 / PDF)** via `window.print()`.
+     - **Download Report (.txt)** via `downloadDoctorReportText()`.
+     - **Copy Summary** to clipboard.
+5. **Fix LCD Garbage Characters & Infinite Serial Ping-Pong Loop**:
+   - Format 16x2 LCD output with fixed 16-character padded buffers (`snprintf`) to eliminate corrupted trailing characters.
+   - Guard `CMD:COMPLETE` and `completeInfusionSession()` with `sessionCompletedEmitted` and `state.tripCompleted` guards to prevent infinite serial ping-pong loops and continuous buzzer beeping.
 
 ---
 
-## 4. Active Components & Files
+## 2. Proposed Changes
 
-### [README.md](file:///f:/PROJECT/IV_version2/README.md) & [frontend/README.md](file:///f:/PROJECT/IV_version2/frontend/README.md)
-- Complete master system specification, circuit schematics, protocol reference, and setup guide.
+### Component 1: Arduino Firmware (`sketch_jan13a.ino` & `sketch_jan13a/sketch_jan13a.ino`)
+- **[MODIFY] `sketch_jan13a.ino`**:
+  - Add `beepAlarm5Seconds()` helper function: loops for 5000 ms with 2800 Hz tones and terminates with `noTone(BUZZER_PIN); digitalWrite(BUZZER_PIN, LOW);`.
+  - Update `loop()`: When `ivLevel < 10 && !beepBelow10`, halt timer, emit `EVENT:CRITICAL_EMPTY`, `BUZZER:EVENT:10:5SEC`, `EVENT:INFUSION_COMPLETED`, and `STATUS:COMPLETED`, display `"CRITICAL <10%!  "` on LCD, and sound `beepAlarm5Seconds()`.
+  - Guard `CMD:COMPLETE` so it only fires if `!sessionCompletedEmitted`.
+  - Use padded `snprintf` 16-character buffers for all LCD rows.
+- **[MODIFY] `sketch_jan13a/sketch_jan13a.ino`**: Mirror identical firmware code.
 
-### [index.html](file:///f:/PROJECT/IV_version2/index.html) & [frontend/index.html](file:///f:/PROJECT/IV_version2/frontend/index.html)
-- Telemetry workstation markup with cache-busted asset links and clean AI summary widget structure.
+### Component 2: Frontend Telemetry & Report Logic (`frontend/app.js` & `app.js`)
+- **[MODIFY] `frontend/app.js`**:
+  - Update `LEVEL` telemetry handler: when `state.level < 10 && state.status === 'INFUSING'`, stop local timer, trigger alarm overlay, sound 5s Web Audio alert, and execute `completeInfusionSession(false)`.
+  - Update `EVENT:CRITICAL_EMPTY` and `BUZZER:EVENT:10:5SEC` handlers to halt timer, trigger alarm UI, and prepare Doctor's Report.
+  - Update `onSimulateWeightSlider(val)`: when tested below 10%, trigger timer stop, 5s alert, warning popup, and report compilation.
+  - Implement and export `downloadDoctorReportText()` to global `window`.
+  - Fix duration and timestamp handling in `completeInfusionSession()`.
+- **[MODIFY] `app.js`**: Mirror identical logic and functions to maintain dual-root deployment integrity.
 
-### [style.css](file:///f:/PROJECT/IV_version2/style.css) & [frontend/style.css](file:///f:/PROJECT/IV_version2/frontend/style.css)
-- Workstation CSS containing `.ai-summary-cockpit-box`, `.btn-ai-apply`, `.ai-disclaimer-badge`, and `.pulse-dot` responsive styles.
-
-### [app.js](file:///f:/PROJECT/IV_version2/app.js) & [frontend/app.js](file:///f:/PROJECT/IV_version2/frontend/app.js)
-- Workstation logic, Web Serial parser, and interactive button feedback handler in `applyAiFlowRateToNotes()`.
-
-### [sketch_jan13a.ino](file:///f:/PROJECT/IV_version2/sketch_jan13a.ino)
-- Arduino firmware v2.5 with millisecond chronometer stop logic, D3 acoustic milestones, and HX711 scale filtering.
-
-### [server.js](file:///f:/PROJECT/IV_version2/server.js) & [package.json](file:///f:/PROJECT/IV_version2/package.json)
-- Standalone static server with strict MIME types for Render Web Service compatibility.
-
-### [render.yaml](file:///f:/PROJECT/IV_version2/render.yaml)
-- Updated static blueprint with `staticPublishPath: ./`.
+### Component 3: Workstation Layout & Styling (`style.css` & `frontend/style.css`)
+- **[MODIFY] `frontend/style.css` & `style.css`**:
+  - Style `.alarm-actions` with clean responsive button row.
+  - Style `.btn-alarm-view-report` with medical cyan glow, clear icon, and prominent primary action styling.
 
 ---
 
-## 5. Verification & Deployment Steps
-1. Commit all modified files (`git add .`, `git commit -m "Add comprehensive master README documentation"`, `git push origin main`).
-2. On Render Dashboard, click **Manual Deploy > Deploy latest commit**.
-3. Verify documentation and workstation load cleanly.
+## 3. Verification Plan
+
+### Automated & Synthesized Tests
+1. **Web Audio & 5-Second Sound**: Verify `playBuzzerBeeps(12, 2800, 250, 160)` plays for exactly ~5 seconds without hanging.
+2. **Text Report Download**: Verify clicking `downloadDoctorReportText()` triggers browser download of `.txt` clinical audit file with patient name and MRN in filename.
+3. **Print Report (PDF)**: Verify `printDoctorReport()` triggers the browser print dialog formatted for clean A4 hospital letterhead.
+
+### Manual Verification in Browser (Port 5500)
+1. Open active browser session at `http://localhost:5500/`.
+2. Start an infusion session (click "Start Infusion").
+3. Slide weight slider to below 10% (e.g., 50g / 5%).
+4. Verify:
+   - Chronometer timer stops immediately.
+   - 5-second acoustic alert sounds.
+   - Critical Warning Popup `#alarm-overlay` appears on screen.
+   - Doctor's Report Modal `#report-modal` opens with complete session metrics.
+   - "Download Report" button downloads `.txt` file.
+   - "Print Doctor Report" opens PDF print dialog.

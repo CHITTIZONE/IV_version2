@@ -326,11 +326,22 @@ function onSimulateWeightSlider(val) {
 
   updateIvBag(level);
   computeRemainingVolume();
+  checkBuzzerMilestones(level);
 
-  if (level <= 5 && !state.alarmActive) {
-    triggerAlarmUI('empty');
-  } else if (level > 5 && state.alarmActive) {
-    dismissAlarmUI();
+  // Critical milestone (< 10%): Stop timer, sound 5s buzzer, place warning popup, and generate complete report
+  if (level < 10) {
+    if (state.status === 'INFUSING') {
+      stopLocalTimer();
+      triggerAlarmUI('empty');
+      if (!state.tripCompleted) {
+        completeInfusionSession(false);
+      }
+      playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps (12 x 410ms ≈ 5s)
+    } else if (!state.alarmActive) {
+      triggerAlarmUI('empty');
+    }
+  } else if (level >= 10 && state.alarmActive) {
+    resolveAlarm();
   }
 }
 
@@ -448,6 +459,20 @@ function parseTelemetryLine(line) {
     if (!isNaN(lvl)) {
       state.level = Math.max(0, Math.min(100, lvl));
       updateIvBag(state.level);
+      computeRemainingVolume();
+      checkBuzzerMilestones(state.level);
+
+      // Critical threshold (< 10%): Stop timer, sound 5s alarm, place warning popup, generate complete report
+      if (state.level < 10 && state.status === 'INFUSING') {
+        stopLocalTimer();
+        triggerAlarmUI('empty');
+        if (!state.tripCompleted) {
+          completeInfusionSession(false);
+        }
+        playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps
+      } else if (state.level >= 10 && state.alarmActive) {
+        resolveAlarm();
+      }
     }
     return;
   }
@@ -477,7 +502,12 @@ function parseTelemetryLine(line) {
     let normalized = 'STANDBY';
     if (rawStat === 'RUNNING' || rawStat === 'RUN') normalized = 'INFUSING';
     else if (rawStat === 'STOPPED' || rawStat === 'STP') normalized = 'PAUSED';
-    else if (rawStat === 'COMPLETED') normalized = 'COMPLETED';
+    else if (rawStat === 'COMPLETED') {
+      normalized = 'COMPLETED';
+      if (!state.tripCompleted) {
+        completeInfusionSession(false);
+      }
+    }
     else if (rawStat === 'ALARM') normalized = 'ALARM';
     else if (rawStat === 'CAL_MODE') normalized = 'CAL_MODE';
     updateStatus(normalized);
@@ -547,9 +577,23 @@ function parseTelemetryLine(line) {
     return;
   }
 
+  // CRITICAL RESERVOIR DEPLETION (< 10%)
+  if (line.startsWith('EVENT:CRITICAL_EMPTY') || line.startsWith('BUZZER:EVENT:10:5SEC')) {
+    stopLocalTimer();
+    triggerAlarmUI('empty');
+    if (!state.tripCompleted) {
+      completeInfusionSession(false);
+    }
+    playBuzzerBeeps(12, 2800, 250, 160); // 5 seconds of emergency acoustic alert beeps
+    logEvent('🚨 CRITICAL EMPTY ALARM: Fluid dropped below 10%. Timer stopped, 5s buzzer sounded, and Doctor Report prepared.', 'error');
+    return;
+  }
+
   // INFUSION TRIP COMPLETED EVENT
-  if (line.startsWith('EVENT:INFUSION_COMPLETED') || line === 'STATUS:COMPLETED') {
-    completeInfusionSession();
+  if (line.startsWith('EVENT:INFUSION_COMPLETED')) {
+    if (!state.tripCompleted) {
+      completeInfusionSession(false);
+    }
     return;
   }
 
@@ -1414,14 +1458,16 @@ async function startAutoCalibration() {
 }
 
 // ── Doctor's Printable Infusion Completion Report Generator ───────────────────
-async function completeInfusionSession() {
+async function completeInfusionSession(fromUser = true) {
+  if (state.tripCompleted) return;
+  state.tripCompleted = true;
   initAudio();
   stopLocalTimer();
   state.sessionEnd = new Date();
   state.status = 'COMPLETED';
 
-  // Send completion command to Arduino hardware to halt timer & buzzer immediately
-  if (state.connected) {
+  // Only send completion command to Arduino hardware if initiated by user on the website
+  if (fromUser && state.connected) {
     try {
       await sendCmd('CMD:COMPLETE');
     } catch (_) {}
@@ -1443,8 +1489,7 @@ async function completeInfusionSession() {
   let durationStr = (state.elapsed && state.elapsed !== '00:00:00') ? state.elapsed : '00:00:00';
   let totalSecs = state.accumulatedSec || 0;
   if (durationStr === '00:00:00' && state.sessionStart) {
-    const durationMs = Math.max(0, state.sessionEnd.getTime() - state.sessionStart.getTime());
-    totalSecs = Math.floor(durationMs / 1000);
+    totalSecs = Math.max(1, Math.floor((state.sessionEnd.getTime() - state.sessionStart.getTime()) / 1000));
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
@@ -1458,10 +1503,12 @@ async function completeInfusionSession() {
   if (stTC) stTC.textContent = durationStr;
   if (lblT) lblT.textContent = durationStr;
 
-  const totalSecsFinal = totalSecs;
+  const totalSecsFinal = Math.max(1, totalSecs);
   const hrs = Math.floor(totalSecsFinal / 3600);
   const mins = Math.floor((totalSecsFinal % 3600) / 60);
   const secs = totalSecsFinal % 60;
+  const durationMs = totalSecsFinal * 1000;
+  const durationHours = Math.max(0.01, durationMs / 3600000);
 
   // Gather patient inputs
   const pName = document.getElementById('inp-patient-name').value.trim() || 'Alexander Wright';
@@ -1483,11 +1530,10 @@ async function completeInfusionSession() {
   const injectedPct = Math.max(0, Math.min(100, 100 - residualPct));
   const injectedVol = (pVol * (injectedPct / 100)).toFixed(1);
   const residualVol = (pVol - parseFloat(injectedVol)).toFixed(1);
-
-  const durationHours = Math.max(0.01, durationMs / 3600000);
   const avgFlowRate = (parseFloat(injectedVol) / durationHours).toFixed(1);
 
-  const startStr = startTime.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
+  const startEpoch = state.sessionStart ? state.sessionStart : new Date(state.sessionEnd.getTime() - durationMs);
+  const startStr = startEpoch.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
   const endStr   = state.sessionEnd.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
   const nowStr   = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
   const reportRef = `IVR-${pId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
@@ -1526,13 +1572,18 @@ async function completeInfusionSession() {
   setEl('rep-time-duration-text', `Total injection time: ${hrs}h ${mins}m ${secs}s`);
   setEl('rep-actual-flow-rate', `${avgFlowRate} mL/hr`);
   setEl('rep-completion-pct', `${injectedPct.toFixed(1)}% Administered`);
-  setEl('rep-trip-outcome', injectedPct >= 95 ? 'TRIP COMPLETED — FULL PRESCRIBED DOSE ADMINISTERED' : 'INFUSION PAUSED / PARTIAL DELIVERY');
+  const outcomeText = (residualPct < 10)
+    ? 'RESERVOIR DEPLETED (< 10%) — INFUSION HALTED SAFELY FOR BAG REPLACEMENT'
+    : (injectedPct >= 95 ? 'TRIP COMPLETED — FULL PRESCRIBED DOSE ADMINISTERED' : 'INFUSION PAUSED / PARTIAL DELIVERY');
+  setEl('rep-trip-outcome', outcomeText);
 
-  // Play celebration / completion sound
-  playBuzzerBeeps(3, 2600, 160, 90);
+  // Play celebration / completion sound if not in alarm state
+  if (residualPct >= 10) {
+    playBuzzerBeeps(3, 2600, 160, 90);
+  }
   logEvent(`🏁 Infusion Trip Completed for ${pName}. Total Injected: ${injectedVol} mL in ${durationStr}. Doctor's Report prepared.`, 'success');
 
-  // Open the printable report modal
+  // Open the printable report modal for view and download
   openDoctorReportModal();
 }
 
@@ -1582,6 +1633,67 @@ function copyReportSummary() {
   }).catch(() => {});
 }
 
+function downloadDoctorReportText() {
+  const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
+  const pId   = document.getElementById('inp-patient-id')?.value.trim() || 'MED-8841';
+  const repRef = document.getElementById('rep-id')?.textContent || `IVR-${pId}`;
+  const nowStr = new Date().toLocaleString();
+
+  const textContent = `===============================================================
+IV SENTRY PRO™ — CLINICAL INFUSION DELIVERY & AUDIT REPORT
+Official Medical Telemetry Record | Reference: ${repRef}
+Generated: ${nowStr}
+===============================================================
+
+1. PATIENT DEMOGRAPHICS & ADMISSION
+---------------------------------------------------------------
+Patient Name   : ${pName}
+Patient ID/MRN : ${pId}
+Patient Age    : ${document.getElementById('rep-patient-age')?.textContent || '—'}
+Bed / Room     : ${document.getElementById('rep-patient-bed')?.textContent || '—'}
+Attending Staff: ${document.getElementById('rep-patient-attender')?.textContent || '—'}
+Admission Time : ${document.getElementById('rep-admission-time')?.textContent || '—'}
+
+2. CLINICAL VITALS & HEMODYNAMIC PROFILE
+---------------------------------------------------------------
+Heart Rate     : ${document.getElementById('rep-vitals-hr')?.textContent || '—'}
+Respiration    : ${document.getElementById('rep-vitals-rr')?.textContent || '—'}
+Blood Pressure : ${document.getElementById('rep-vitals-bp')?.textContent || '—'}
+Hemo Assessment: ${document.getElementById('rep-vitals-hemo')?.textContent || '—'}
+
+3. PRESCRIPTION & VOLUMETRIC AUDIT
+---------------------------------------------------------------
+Solution Type  : ${document.getElementById('rep-solution-type')?.textContent || '—'}
+Target Volume  : ${document.getElementById('rep-target-volume')?.textContent || '—'}
+AI Flow Target : ${document.getElementById('rep-ai-prescribed-flow')?.textContent || '—'}
+Administered   : ${document.getElementById('rep-saline-injected')?.textContent || '—'} mL
+Residual Mass  : ${document.getElementById('rep-saline-residual')?.textContent || '—'}
+Elapsed Time   : ${document.getElementById('rep-time-duration')?.textContent || '—'}
+Avg Flow Rate  : ${document.getElementById('rep-actual-flow-rate')?.textContent || '—'}
+Status/Outcome : ${document.getElementById('rep-trip-outcome')?.textContent || '—'}
+
+4. CLINICAL NOTES & INSTRUCTIONS
+---------------------------------------------------------------
+${document.getElementById('rep-clinical-notes')?.textContent || 'None recorded.'}
+
+===============================================================
+Document valid when signed by licensed medical practitioner.
+IV SENTRY PRO™ Clinical Telemetry Subsystem (ATmega328P / HX711).
+===============================================================
+`;
+
+  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Doctor_Report_${pId}_${Date.now().toString().slice(-4)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  logEvent(`Doctor Report downloaded as text file for ${pName}.`, 'success');
+}
+
 // ── Explicit Global Window Scope Bindings ─────────────────────────────────────
 window.applyWeightPreset = applyWeightPreset;
 window.onStartingWeightInputChange = onStartingWeightInputChange;
@@ -1615,5 +1727,6 @@ window.completeInfusionSession = completeInfusionSession;
 window.openDoctorReportModal = openDoctorReportModal;
 window.closeDoctorReportModal = closeDoctorReportModal;
 window.printDoctorReport = printDoctorReport;
+window.downloadDoctorReportText = downloadDoctorReportText;
 window.copyReportSummary = copyReportSummary;
 

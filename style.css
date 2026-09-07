@@ -1532,17 +1532,51 @@ textarea {
   margin-bottom: 24px;
 }
 
-.btn-alarm-ack {
-  padding: 14px 28px;
+.alarm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-alarm-view-report {
+  padding: 13px 22px;
   border-radius: var(--radius-md);
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #0284c7, #00f5d4);
+  color: #040810;
+  border: none;
+  box-shadow: 0 0 25px rgba(0, 245, 212, 0.45);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-alarm-view-report:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 35px rgba(0, 245, 212, 0.7);
+}
+
+.btn-alarm-ack {
+  padding: 13px 24px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 0.92rem;
   font-weight: 700;
   background: linear-gradient(135deg, #009e52, #00e676);
   color: #021a0d;
   border: none;
   box-shadow: 0 0 30px var(--emerald-glow);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
 }
 .btn-alarm-ack:hover {
   transform: translateY(-2px);

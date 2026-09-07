@@ -71,6 +71,8 @@ void beepBuzzer(int count, int freq, int onMs, int offMs) {
     digitalWrite(BUZZER_PIN, LOW);
     if (i < count - 1) delay(offMs);
   }
+  noTone(BUZZER_PIN);
+  digitalWrite(BUZZER_PIN, LOW);
 }
 
 void beepBuzzer(int count, int freq) {
@@ -79,6 +81,20 @@ void beepBuzzer(int count, int freq) {
 
 void beepBuzzer(int count) {
   beepBuzzer(count, 2400, 120, 90);
+}
+
+// Sound emergency acoustic alarm on Pin D3 for exactly 5 seconds, then silence completely
+void beepAlarm5Seconds() {
+  unsigned long startAlarm = millis();
+  while (millis() - startAlarm < 5000) {
+    tone(BUZZER_PIN, 2800);
+    delay(250);
+    noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(150);
+  }
+  noTone(BUZZER_PIN);
+  digitalWrite(BUZZER_PIN, LOW);
 }
 
 void resetBuzzerMilestones() {
@@ -191,19 +207,26 @@ void processCommand(String cmd) {
   }
   // COMPLETE INFUSION SESSION — LOCKS FINAL TIME & SILENCES ALL ALARMS
   else if (cmd == F("CMD:COMPLETE") || cmd == F("COMPLETE")) {
-    if (timerRunning) {
-      elapsedTime = millis() - startTime; // Lock final duration
+    if (!sessionCompletedEmitted || timerRunning) {
+      if (timerRunning) {
+        elapsedTime = millis() - startTime; // Lock final duration
+      }
+      timerRunning = false;                 // TIMER STOPS
+      sessionCompletedEmitted = true;
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
+      Serial.println(F("EVENT:INFUSION_COMPLETED"));
+      Serial.println(F("STATUS:COMPLETED"));
+      lcd.clear();
+      lcd.setCursor(0, 0); lcd.print(F("TRIP COMPLETED! "));
+      lcd.setCursor(0, 1); lcd.print(F("REPORT AUDIT OK "));
+      beepBuzzer(3, 2600, 150, 100);
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
+    } else {
+      // Already completed — acknowledge status without re-triggering buzzer or event loop
+      Serial.println(F("STATUS:COMPLETED"));
     }
-    timerRunning = false;                 // TIMER STOPS
-    sessionCompletedEmitted = true;
-    noTone(BUZZER_PIN);
-    digitalWrite(BUZZER_PIN, LOW);
-    Serial.println(F("EVENT:INFUSION_COMPLETED"));
-    Serial.println(F("STATUS:COMPLETED"));
-    lcd.clear();
-    lcd.setCursor(0, 0); lcd.print(F("TRIP COMPLETED! "));
-    lcd.setCursor(0, 1); lcd.print(F("REPORT AUDIT OK "));
-    beepBuzzer(3, 2600, 150, 100);
   }
   // AUTO-CALIBRATION: AUTOMATIC ZERO TARE
   else if (cmd == F("CAL:MODE:START") || cmd == F("CAL:AUTO")) {
@@ -377,65 +400,77 @@ void loop() {
       Serial.println(F("BUZZER:EVENT:25:1"));
       beepBuzzer(1, 2600, 150, 80);
     }
-    // Critical Milestone (< 10%): 5 Rapid Alarm Beeps (2800 Hz)
+    // Critical Milestone (< 10%): Stop timer, sound 5-second buzzer alarm, emit critical event & complete session
     if (ivLevel < 10 && !beepBelow10) {
       beepBelow10 = true;
-      Serial.println(F("BUZZER:EVENT:10:5"));
-      beepBuzzer(5, 2800, 100, 90);
+      sessionCompletedEmitted = true;
+      if (timerRunning) {
+        elapsedTime = millis() - startTime;
+        timerRunning = false; // STOP TIMER IMMEDIATELY
+      }
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
+
+      Serial.println(F("EVENT:CRITICAL_EMPTY"));
+      Serial.println(F("BUZZER:EVENT:10:5SEC"));
+      Serial.println(F("EVENT:INFUSION_COMPLETED"));
+      Serial.println(F("STATUS:COMPLETED"));
+
+      lcd.clear();
+      lcd.setCursor(0, 0); lcd.print(F("CRITICAL <10%!  "));
+      lcd.setCursor(0, 1); lcd.print(F("TIMER STOPPED   "));
+
+      beepAlarm5Seconds();
+
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
     }
 
     // Automatic Trip Completion (Fluid Level 0% or weight <= empty tare)
     if (ivLevel <= 0 && !sessionCompletedEmitted) {
       sessionCompletedEmitted = true;
-      elapsedTime = millis() - startTime; // Lock final duration
-      timerRunning = false;               // STOP TIMER IMMEDIATELY
+      if (timerRunning) {
+        elapsedTime = millis() - startTime; // Lock final duration
+        timerRunning = false;               // STOP TIMER IMMEDIATELY
+      }
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
       Serial.println(F("EVENT:INFUSION_COMPLETED"));
       Serial.println(F("STATUS:COMPLETED"));
-      beepBuzzer(3, 2600, 200, 100);
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print(F("TRIP COMPLETED! "));
       lcd.setCursor(0, 1); lcd.print(F("DOCTOR REPORT OK"));
+      beepBuzzer(3, 2600, 150, 100);
+      noTone(BUZZER_PIN);
+      digitalWrite(BUZZER_PIN, LOW);
     }
   }
 
-  // ── 8. I2C LCD Display Real-Time Refresh ───────────────────────────────────
+  // ── 8. I2C LCD Display Real-Time Refresh (Fixed 16-Char Rows) ───────────────
+  char line0[17];
+  char line1[17];
+
   if (calModeActive) {
-    lcd.setCursor(0, 0);
-    lcd.print(F("CALIBRATION MODE"));
-    lcd.setCursor(0, 1);
-    lcd.print(F("WT: "));
-    lcd.print(weight, 1);
-    lcd.print(F(" g     "));
-  } else if (sessionCompletedEmitted) {
-    lcd.setCursor(0, 0);
-    lcd.print(F("TRIP COMPLETED! "));
-    lcd.setCursor(0, 1);
-    lcd.print(F("TIME: "));
-    lcd.print(timeStr);
+    snprintf(line0, sizeof(line0), "CALIBRATION MODE");
+    int wtInt = (int)weight;
+    int wtDec = abs((int)(weight * 10.0f)) % 10;
+    snprintf(line1, sizeof(line1), "WT: %4d.%1d g    ", wtInt, wtDec);
+  } else if (sessionCompletedEmitted || beepBelow10) {
+    snprintf(line0, sizeof(line0), "TIME: %-10s", timeStr);
+    snprintf(line1, sizeof(line1), "STOP %3d%% W:%4dg", ivLevel, (int)weight);
   } else {
-    // Row 1: Session Time & Status
-    lcd.setCursor(0, 0);
-    lcd.print(F("Time: "));
-    lcd.print(timeStr);
-    lcd.print(F(" "));
+    // Line 1: TIME (e.g., "TIME: 00:01:23  ")
+    snprintf(line0, sizeof(line0), "TIME: %-10s", timeStr);
 
-    // Row 2: Level %, Weight, State Indicator
-    lcd.setCursor(0, 1);
-    if (timerRunning) {
-      if (ivLevel < 10) {
-        lcd.print(F("ALRT!"));
-      } else {
-        lcd.print(F("RUN "));
-      }
-    } else {
-      lcd.print(F("STP "));
-    }
-    lcd.print(F("L:"));
-    lcd.print(ivLevel);
-    lcd.print(F("% W:"));
-    lcd.print((int)weight);
-    lcd.print(F("g   "));
+    // Line 2: ST/STP/RUN % W: g (e.g., "RUN  85% W: 425g" or "STOP 10% W:  50g")
+    const char* tag = timerRunning ? (ivLevel < 10 ? "ALRT" : "RUN ") : "STOP";
+    snprintf(line1, sizeof(line1), "%s %3d%% W:%4dg", tag, ivLevel, (int)weight);
   }
+
+  lcd.setCursor(0, 0);
+  lcd.print(line0);
+  lcd.setCursor(0, 1);
+  lcd.print(line1);
 
   delay(350); // Telemetry sampling cadence
 }
