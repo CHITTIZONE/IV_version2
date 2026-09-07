@@ -1501,7 +1501,11 @@ function updateDoctorReportData() {
   const injectedPct = Math.max(0, Math.min(100, 100 - residualPct));
   const injectedVol = (pVol * (injectedPct / 100)).toFixed(1);
   const residualVol = (pVol - parseFloat(injectedVol)).toFixed(1);
-  const avgFlowRate = (parseFloat(injectedVol) / durationHours).toFixed(1);
+  let rawFlowRate = (parseFloat(injectedVol) / durationHours);
+  if (isNaN(rawFlowRate) || rawFlowRate > 2000 || durationHours < 0.05) {
+    rawFlowRate = state.aiPrediction.flowRate || 125;
+  }
+  const avgFlowRate = rawFlowRate.toFixed(1);
 
   const startEpoch = state.sessionStart ? state.sessionStart : new Date((state.sessionEnd || new Date()).getTime() - durationMs);
   const startStr = startEpoch.toLocaleString([], { dateStyle: 'medium', timeStyle: 'medium' });
@@ -1586,8 +1590,10 @@ async function completeInfusionSession(fromUser = true) {
   const pName = document.getElementById('inp-patient-name')?.value.trim() || 'Patient';
   logEvent(`🏁 Infusion Trip Completed for ${pName}. Total Injected: ${document.getElementById('rep-saline-injected')?.textContent || 0} mL in ${state.elapsed}. Doctor's Report prepared.`, 'success');
 
-  // Open the printable report modal for view and download
-  openDoctorReportModal(false);
+  // Open report modal directly when manually completed or 0% reached; leave warning popup active FIRST when <10% alarm fires
+  if (fromUser || residualPct <= 0) {
+    openDoctorReportModal(false);
+  }
 }
 
 function openDoctorReportModal(autoDownload = false) {
